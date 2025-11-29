@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="onlinetechstore.client/onlinetechstore.client.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+  <Project Path="OnlineTechStore.Server/OnlineTechStore.Server.csproj" />
+</Solution>
