@@ -11,7 +11,7 @@ using OnlineTechStore.Server.Data;
 namespace OnlineTechStore.Server.Migrations
 {
     [DbContext(typeof(OnlineTechStoreDbContext))]
-    [Migration("20251202110913_InitialCreate")]
+    [Migration("20251202201953_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />

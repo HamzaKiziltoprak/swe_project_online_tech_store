@@ -3,8 +3,8 @@
   "WorkspaceRootPath": "C:\\Users\\hamza\\OneDrive\\Belgeler\\GitHub\\swe_project_online_tech_store\\OnlineTechStore\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{6BAD1FBB-12DF-8C92-112A-322FB5D99A7D}|OnlineTechStore.Server\\OnlineTechStore.Server.csproj|c:\\users\\hamza\\onedrive\\belgeler\\github\\swe_project_online_tech_store\\onlinetechstore\\onlinetechstore.server\\controllers\\dbhealthcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{6BAD1FBB-12DF-8C92-112A-322FB5D99A7D}|OnlineTechStore.Server\\OnlineTechStore.Server.csproj|solutionrelative:onlinetechstore.server\\controllers\\dbhealthcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{6BAD1FBB-12DF-8C92-112A-322FB5D99A7D}|OnlineTechStore.Server\\OnlineTechStore.Server.csproj|c:\\users\\hamza\\onedrive\\belgeler\\github\\swe_project_online_tech_store\\onlinetechstore\\onlinetechstore.server\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{6BAD1FBB-12DF-8C92-112A-322FB5D99A7D}|OnlineTechStore.Server\\OnlineTechStore.Server.csproj|solutionrelative:onlinetechstore.server\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -19,14 +19,14 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "DbHealthController.cs",
-              "DocumentMoniker": "C:\\Users\\hamza\\OneDrive\\Belgeler\\GitHub\\swe_project_online_tech_store\\OnlineTechStore\\OnlineTechStore.Server\\Controllers\\DbHealthController.cs",
-              "RelativeDocumentMoniker": "OnlineTechStore.Server\\Controllers\\DbHealthController.cs",
-              "ToolTip": "C:\\Users\\hamza\\OneDrive\\Belgeler\\GitHub\\swe_project_online_tech_store\\OnlineTechStore\\OnlineTechStore.Server\\Controllers\\DbHealthController.cs",
-              "RelativeToolTip": "OnlineTechStore.Server\\Controllers\\DbHealthController.cs",
-              "ViewState": "AgIAAAYAAAAAAAAAAAAAwCAAAAABAAAAAAAAAA==",
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\hamza\\OneDrive\\Belgeler\\GitHub\\swe_project_online_tech_store\\OnlineTechStore\\OnlineTechStore.Server\\Program.cs",
+              "RelativeDocumentMoniker": "OnlineTechStore.Server\\Program.cs",
+              "ToolTip": "C:\\Users\\hamza\\OneDrive\\Belgeler\\GitHub\\swe_project_online_tech_store\\OnlineTechStore\\OnlineTechStore.Server\\Program.cs",
+              "RelativeToolTip": "OnlineTechStore.Server\\Program.cs",
+              "ViewState": "AgIAAB8AAAAAAAAAAAAkwDAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-02T11:21:10.997Z",
+              "WhenOpened": "2025-12-02T20:17:00.331Z",
               "EditorCaption": ""
             }
           ]

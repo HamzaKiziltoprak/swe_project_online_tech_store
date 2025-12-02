@@ -7,12 +7,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
 // Configure EF Core (Npgsql) using Neon connection string
-var neonConnection = builder.Configuration.GetConnectionString("Neon")
-                      ?? Environment.GetEnvironmentVariable("NEON_CONNECTION");
+var neonConnection = builder.Configuration.GetConnectionString("DefaultConnection")
+                    ?? Environment.GetEnvironmentVariable("NEON_CONNECTION");
 
 if (string.IsNullOrWhiteSpace(neonConnection))
 {
-    throw new InvalidOperationException("Neon connection string is not configured. Set ConnectionStrings:Neon in appsettings.json or NEON_CONNECTION environment variable.");
+    throw new InvalidOperationException("Neon connection string is not configured. Set ConnectionStrings:DefaultConnection in appsettings.json or NEON_CONNECTION environment variable.");
 }
 
 builder.Services.AddDbContext<OnlineTechStoreDbContext>(options =>
