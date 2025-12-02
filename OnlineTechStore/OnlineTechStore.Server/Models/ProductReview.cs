@@ -24,9 +24,9 @@ namespace OnlineTechStore.Server.Models
         [ValidateNever]
         public virtual Product Product { get; set; }
 
-        public int UserID { get; set; }
-        [ForeignKey("UserID")]
+        public string UserId { get; set; }
+        [ForeignKey("UserId")]
         [ValidateNever]
-        public virtual User User { get; set; }
+        public virtual ApplicationUser User { get; set; }
     }
 }
