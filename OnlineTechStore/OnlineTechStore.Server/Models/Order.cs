@@ -30,7 +30,6 @@ namespace OnlineTechStore.Server.Models
         public virtual User User { get; set; }
 
         [ValidateNever]
-        public virtual ICollection<OrderItem> OrderItems { get; set; }
-
+        public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
     }
 }

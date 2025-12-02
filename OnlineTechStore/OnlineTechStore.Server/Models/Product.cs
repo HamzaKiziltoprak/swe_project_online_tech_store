@@ -41,9 +41,15 @@ namespace OnlineTechStore.Server.Models
         public virtual Category Category { get; set; }
 
         [ValidateNever]
-        public ICollection<ProductSpecification> ProductSpecifications { get; set; }
+        public ICollection<ProductSpecification> ProductSpecifications { get; set; } = new List<ProductSpecification>();
 
         [ValidateNever]
-        public ICollection<OrderItem> OrderItems { get; set; }
+        public ICollection<ProductImage> ProductImages { get; set; } = new List<ProductImage>();
+
+        [ValidateNever]
+        public ICollection<ProductReview> ProductReviews { get; set; } = new List<ProductReview>();
+
+        [ValidateNever]
+        public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
     }
 }

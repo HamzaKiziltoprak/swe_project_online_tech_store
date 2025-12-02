@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
-using Systemç.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace OnlineTechStore.Server.Models

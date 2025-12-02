@@ -34,5 +34,11 @@ namespace OnlineTechStore.Server.Models
 
         [ValidateNever]
         public ICollection<Order> Orders { get; set; } = new List<Order>();
+
+        [ValidateNever]
+        public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
+
+        [ValidateNever]
+        public ICollection<ProductReview> ProductReviews { get; set; } = new List<ProductReview>();
     }
 }
