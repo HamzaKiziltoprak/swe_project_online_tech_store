@@ -1,58 +1,41 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import './App.css';
 
-interface Forecast {
-    date: string;
-    temperatureC: number;
-    temperatureF: number;
-    summary: string;
-}
-
 function App() {
-    const [forecasts, setForecasts] = useState<Forecast[]>();
+    const [theme, setTheme] = useState('light');
 
     useEffect(() => {
-        populateWeatherData();
-    }, []);
+        // On theme change, update the class on the body
+        document.body.className = '';
+        document.body.classList.add(theme);
+    }, [theme]);
 
-    const contents = forecasts === undefined
-        ? <p><em>Loading... Please refresh once the ASP.NET backend has started. See <a href="https://aka.ms/jspsintegrationreact">https://aka.ms/jspsintegrationreact</a> for more details.</em></p>
-        : <table className="table table-striped" aria-labelledby="tableLabel">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Temp. (C)</th>
-                    <th>Temp. (F)</th>
-                    <th>Summary</th>
-                </tr>
-            </thead>
-            <tbody>
-                {forecasts.map(forecast =>
-                    <tr key={forecast.date}>
-                        <td>{forecast.date}</td>
-                        <td>{forecast.temperatureC}</td>
-                        <td>{forecast.temperatureF}</td>
-                        <td>{forecast.summary}</td>
-                    </tr>
-                )}
-            </tbody>
-        </table>;
+    const toggleTheme = () => {
+        setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
+    };
 
     return (
-        <div>
-            <h1 id="tableLabel">Weather forecast</h1>
-            <p>This component demonstrates fetching data from the server.</p>
-            {contents}
+        <div className="app-container">
+            <header className="app-header">
+                <h1 className='logo'>Online Tech Store</h1>
+                <nav>
+                    <ul className='nav-links'>
+                        <li><a href="#home">Home</a></li>
+                        <li><a href="#products">Products</a></li>
+                        <li><a href="#about">About</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                        <li><a href="#login">Sign In</a></li>
+                    </ul>
+                </nav>
+                <button className="theme-toggle-button" onClick={toggleTheme}>
+                {theme === 'light' ? '🌙' : '☀️'}
+                </button>
+            </header>
+            <main>
+                
+            </main>
         </div>
     );
-
-    async function populateWeatherData() {
-        const response = await fetch('weatherforecast');
-        if (response.ok) {
-            const data = await response.json();
-            setForecasts(data);
-        }
-    }
 }
 
 export default App;
