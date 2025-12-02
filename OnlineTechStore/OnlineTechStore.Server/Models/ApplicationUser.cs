@@ -16,7 +16,7 @@ namespace OnlineTechStore.Server.Models
 
         public string? Address { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         [ValidateNever]
         public ICollection<Order> Orders { get; set; } = new List<Order>();

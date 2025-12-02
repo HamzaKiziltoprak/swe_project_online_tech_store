@@ -1,4 +1,4 @@
-# OnlineTechStore Backend Documentation
+# OnlineTechStore Backend Documentation (Updated)
 
 This document provides a technical overview of the backend for the OnlineTechStore project.
 
@@ -19,7 +19,7 @@ The backend is built with ASP.NET Core and is responsible for handling business 
 ## 3. Project Structure
 
 - **/Controllers:** Contains API controllers that handle incoming HTTP requests.
-  - `AuthController.cs`: Manages user registration and login.
+  - `AuthController.cs`: Manages user registration, login, and health checks.
 - **/Data:** Contains the Entity Framework Core DbContext.
   - `OnlineTechStoreDbContext.cs`: Defines the database schema and tables.
 - **/Models:** Contains the data models (entities) for the application.
@@ -29,26 +29,19 @@ The backend is built with ASP.NET Core and is responsible for handling business 
 - `Program.cs`: The main entry point of the application. It configures services (like Identity, DbContext, JWT) and the HTTP request pipeline (middleware).
 - `appsettings.json`: Configuration file for the application, including database connection strings and JWT settings.
 
-## 4. Authentication and Authorization
+## 4. Authentication and API Endpoints
 
 The application uses a token-based authentication system.
 
-- **Framework:** `ASP.NET Core Identity` is used for user management (password hashing, etc.).
+- **Framework:** `ASP.NET Core Identity` is used for user management.
 - **Tokens:** `JSON Web Tokens (JWT)` are used for authenticating API requests.
 
-### Authentication Flow:
-1. A new user registers via the `/api/auth/register` endpoint.
-2. The user logs in via the `/api/auth/login` endpoint with their email and password.
-3. If the credentials are valid, the server returns a JWT.
-4. The client application must include this JWT in the `Authorization` header for subsequent requests to protected API endpoints (e.g., `Authorization: Bearer <token>`).
-
 ### Auth Controller (`/api/auth`):
-- **`POST /register`**:
+- **`POST /register`**: Creates a new user.
   - **Body:** `{ "email": "...", "password": "...", "firstName": "...", "lastName": "..." }`
-  - **Description:** Creates a new user in the database.
-- **`POST /login`**:
+- **`POST /login`**: Authenticates a user and returns a JWT.
   - **Body:** `{ "email": "...", "password": "..." }`
-  - **Description:** Authenticates a user and returns a JWT if successful.
+- **`GET /health`**: Checks the database connection status. Returns a success message if the connection is healthy.
 
 ### JWT Configuration (`appsettings.json`):
 The JWT settings are stored in the `Jwt` section:
@@ -61,11 +54,34 @@ The JWT settings are stored in the `Jwt` section:
 - The application uses **Entity Framework Core** as its Object-Relational Mapper (ORM).
 - The database provider is **Npgsql** for **PostgreSQL**.
 - The connection string is configured in `appsettings.json` under `ConnectionStrings:DefaultConnection`.
-- The `OnlineTechStoreDbContext` class in the `/Data` folder defines the database sets (`DbSet`) for the models. ASP.NET Core Identity tables (`AspNetUsers`, `AspNetRoles`, etc.) are also managed through this context.
+- The `OnlineTechStoreDbContext` class in the `/Data` folder manages all data models.
+- **Important Note:** All `DateTime` properties in the models (e.g., `CreatedAt`, `OrderDate`) are configured to be stored in **UTC** format (`DateTime.UtcNow`) to ensure compatibility with PostgreSQL.
 
-## 6. How to Run the Backend
+## 6. How to Run the Project
 
-1. Make sure the PostgreSQL database is accessible with the connection string in `appsettings.json`.
-2. Navigate to the root directory of the solution.
-3. Run the command: `dotnet run --project OnlineTechStore.Server`
-4. The API will be available at the URLs specified in `Properties/launchSettings.json` (e.g., `https://localhost:7111`).
+### For Backend API Testing (e.g., with Postman)
+
+1.  Navigate to the root directory of the solution.
+2.  Run the command: `dotnet run --project OnlineTechStore.Server`
+3.  The API will be available at `http://localhost:5187`. For direct API testing, use this HTTP URL to avoid potential issues with development SSL certificates.
+
+### For Running the Full Application (Backend + Frontend)
+
+1.  **Open two separate terminal windows.**
+
+2.  **In the first terminal, start the Backend Server:**
+    ```bash
+    dotnet run --project OnlineTechStore.Server
+    ```
+    Wait until you see messages like `Now listening on: http://localhost:5187`.
+
+3.  **In the second terminal, start the Frontend Server:**
+    ```bash
+    cd onlinetechstore.client
+    npm install
+    npm run dev
+    ```
+    This will install any missing packages and then start the frontend server on a port like `15615`.
+
+4.  **Test in your browser:**
+    Open the frontend URL (e.g., `https://localhost:15615`) in your browser. The frontend is configured to automatically proxy API requests to the backend.

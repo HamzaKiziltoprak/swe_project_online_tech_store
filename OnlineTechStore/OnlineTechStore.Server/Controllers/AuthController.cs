@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using OnlineTechStore.Server.Data;
 using OnlineTechStore.Server.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -14,11 +15,13 @@ namespace OnlineTechStore.Server.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IConfiguration _configuration;
+        private readonly OnlineTechStoreDbContext _dbContext;
 
-        public AuthController(UserManager<ApplicationUser> userManager, IConfiguration configuration)
+        public AuthController(UserManager<ApplicationUser> userManager, IConfiguration configuration, OnlineTechStoreDbContext dbContext)
         {
             _userManager = userManager;
             _configuration = configuration;
+            _dbContext = dbContext;
         }
 
         public class RegisterModel
@@ -86,6 +89,27 @@ namespace OnlineTechStore.Server.Controllers
                 });
             }
             return Unauthorized();
+        }
+
+        [HttpGet("health")]
+        public async Task<IActionResult> HealthCheck()
+        {
+            try
+            {
+                var canConnect = await _dbContext.Database.CanConnectAsync();
+                if (canConnect)
+                {
+                    return Ok("Database connection is healthy.");
+                }
+                else
+                {
+                    return StatusCode(500, "Database connection could not be established.");
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Database connection is unhealthy: {ex.Message}");
+            }
         }
     }
 }
