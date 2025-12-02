@@ -88,10 +88,25 @@ nav {
 }
 
 .theme-toggle-button:focus,
-.theme-toggle-button:active {
+.theme-toggle-button:active,
+.language-toggle-button:focus,
+.language-toggle-button:active {
      outline: none;
      box-shadow: none;
     }
+
+.language-toggle-button {
+    border: none;
+    background-color: transparent;
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+.language-toggle-button:hover {
+    opacity: 0.7;
+}
 
 main {
     padding: 2rem;

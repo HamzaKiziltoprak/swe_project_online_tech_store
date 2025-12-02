@@ -1,0 +1,38 @@
+.products-page-container {
+    display: flex;
+    gap: 20px;
+}
+
+.filter-bar {
+    width: 200px;
+    border-right: 1px solid var(--border-color);
+    padding: 20px;
+}
+
+.filter-group {
+    margin-bottom: 20px;
+}
+
+.filter-group h4 {
+    margin-top: 0;
+}
+
+.filter-group label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.filter-search-input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-sizing: border-box; /* Ensures padding doesn't increase total width */
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+.products-list {
+    flex-grow: 1;
+    padding: 20px;
+}
