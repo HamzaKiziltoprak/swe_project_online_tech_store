@@ -72,30 +72,12 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-}).AddJwtBearer(o =>
-{
-    o.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,  // SECURITY FIX: Enable token expiration validation
-        ValidateIssuerSigningKey = true,
-        ClockSkew = TimeSpan.FromMinutes(2) // Allow 2 minutes clock skew tolerance
-    };
-});
+// Configure Authentication and Identity
+// AddIdentityApiEndpoints provides both authentication and /login, /register endpoints
+builder.Services.AddAuthentication()
+    .AddBearerToken(IdentityConstants.BearerScheme);
 
-builder.Services.AddAuthorization();
-
-// Configure Identity with password policies and user requirements
-builder.Services.AddIdentityApiEndpoints<User>(options =>
+builder.Services.AddIdentityCore<User>(options =>
 {
     // Password settings
     options.Password.RequireDigit = true;
@@ -105,7 +87,7 @@ builder.Services.AddIdentityApiEndpoints<User>(options =>
     options.Password.RequireLowercase = true;
     options.Password.RequiredUniqueChars = 4;
 
-    // Lockout settings (protection against brute force attacks)
+    // Lockout settings
     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
     options.Lockout.MaxFailedAccessAttempts = 5;
     options.Lockout.AllowedForNewUsers = true;
@@ -114,11 +96,17 @@ builder.Services.AddIdentityApiEndpoints<User>(options =>
     options.User.RequireUniqueEmail = true;
     
     // Sign-in settings
-    options.SignIn.RequireConfirmedEmail = false; // Set to true when email service is configured
+    options.SignIn.RequireConfirmedEmail = false;
     options.SignIn.RequireConfirmedPhoneNumber = false;
 })
     .AddRoles<Role>()
-    .AddEntityFrameworkStores<DataContext>();
+    .AddEntityFrameworkStores<DataContext>()
+    .AddSignInManager()
+    .AddDefaultTokenProviders()
+    .AddApiEndpoints();
+
+// Add Authorization after Identity is configured
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
