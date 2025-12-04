@@ -1,7 +1,0 @@
-dotnet add package Microsoft.EntityFrameworkCore
-dotnet add package Microsoft.EntityFrameworkCore.Design
-dotnet add OnlineTechStore.Server package Npgsql.EntityFrameworkCore.PostgreSQL
-dotnet add OnlineTechStore.Server package Microsoft.EntityFrameworkCore.Tools
-# if you don't have the EF CLI installed:
-dotnet tool install --global dotnet-ef
-dotnet restore
