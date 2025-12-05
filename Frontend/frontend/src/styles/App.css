@@ -1,0 +1,117 @@
+/* General styles and light theme (default) */
+:root {
+  --background-color: #ffffff;
+  --text-color: #213547;
+  --header-bg-color: #f8f8f8;
+  --button-bg-color: #e0e0e0;
+  --button-text-color: #213547;
+  --border-color: #dddddd;
+}
+
+/* Dark theme */
+.dark {
+  --background-color: #242424;
+  --text-color: rgba(255, 255, 255, 0.87);
+  --header-bg-color: #1a1a1a;
+  --button-bg-color: #3a3a3a;
+  --button-text-color: rgba(255, 255, 255, 0.87);
+  --border-color: #424242;
+}
+
+body {
+    margin: 0;
+    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.app-container {
+    min-height: 100vh;
+    text-align: center;
+    position: fixed;
+    width: 100%;
+    top: 0;
+    left: 0;
+}
+
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    background-color: var(--header-bg-color);
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.3s, border-bottom 0.3s;
+}
+
+.logo {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+nav {
+    margin: 0 auto;
+}
+
+.nav-links {
+    list-style: none;
+    display: flex;
+    gap: 20px;
+    margin: 0;
+    padding: 0;
+}
+.nav-links a {
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: 500;
+    font-size: 1rem;
+    transition: opacity 0.2s;
+}
+
+.nav-links a:hover {
+    opacity: 0.7;
+}
+
+.theme-toggle-button {
+    font-size: 1.5rem;
+    line-height: 1;
+    border: none;
+    background-color: transparent;
+    padding: 0;
+    cursor: pointer;
+    color: var(--text-color);
+    transition: color 0.3s;
+}
+.theme-toggle-button:hover {
+    opacity: 0.7; /* Üzerine gelince opaklığı azaltır */
+}
+
+.theme-toggle-button:focus,
+.theme-toggle-button:active,
+.language-toggle-button:focus,
+.language-toggle-button:active {
+     outline: none;
+     box-shadow: none;
+    }
+
+.language-toggle-button {
+    border: none;
+    background-color: transparent;
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+.language-toggle-button:hover {
+    opacity: 0.7;
+}
+
+main {
+    padding: 2rem;
+    padding-top: 80px; /* Header height */
+    overflow-y: auto; /* Allow vertical scrolling */
+    height: 100vh; /* Full viewport height */
+    box-sizing: border-box; /* Include padding in height calculation */
+}
