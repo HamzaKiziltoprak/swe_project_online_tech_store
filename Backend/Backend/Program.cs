@@ -61,10 +61,10 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy.WithOrigins(
-                "http://localhost:5173",  // Vite dev server
-                "http://localhost:3000",  // Alternative frontend port
-                "https://localhost:7100", // HTTPS backend
-                "http://localhost:5100"   // HTTP backend
+                "https://localhost:5173",  // Vite dev server (HTTPS)
+                "https://localhost:3000",  // Alternative frontend port (HTTPS)
+                "https://localhost:7100",  // HTTPS backend
+                "http://localhost:5100"    // HTTP backend
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
@@ -132,9 +132,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("AllowFrontend");
-
 app.UseHttpsRedirection();
+
+app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();

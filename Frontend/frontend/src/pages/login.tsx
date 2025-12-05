@@ -20,7 +20,7 @@ const LoginPage: React.FC = () => {
         setSuccessMessage(null); // Clear success message on new attempt
 
         try {
-            const response = await fetch('http://localhost:5100/login', {
+            const response = await fetch('https://localhost:7100/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
