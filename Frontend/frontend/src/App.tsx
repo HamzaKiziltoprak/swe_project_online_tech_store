@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import './styles/App.css';
 import { Routes, Route, Link } from 'react-router-dom';
 import Products from './pages/Products';
+import LoginPage from './pages/login';
+import RegisterPage from './pages/register';
 
 function Home() {
     return (
@@ -27,15 +29,6 @@ function Contact() {
         <div>
             <h2>Contact Page</h2>
             <p>Get in touch with us!</p>
-        </div>
-    );
-}
-
-function SignIn() {
-    return (
-        <div>
-            <h2>Sign In Page</h2>
-            <p>Please log in!</p>
         </div>
     );
 }
@@ -74,7 +67,7 @@ function App() {
                         <li><Link to="/products">{t('Products')}</Link></li>
                         <li><Link to="/about">{t('About')}</Link></li>
                         <li><Link to="/contact">{t('Contact')}</Link></li>
-                        <li><Link to="/signin">{t('Sign In')}</Link></li>
+                        <li><Link to="/login">{t('Sign In')}</Link></li>
                     </ul>
                 </nav>
                 <button className="theme-toggle-button" onClick={toggleTheme}>
@@ -90,7 +83,8 @@ function App() {
                     <Route path="/products" element={<Products />} />
                     <Route path="/about" element={<About />} />
                     <Route path="/contact" element={<Contact />} />
-                    <Route path="/signin" element={<SignIn />} />
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
                 </Routes>
             </main>
         </div>

@@ -1,0 +1,98 @@
+/* src/styles/register.css */
+
+.register-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 2rem 0; /* Add some padding for smaller screens */
+    background-color: var(--background-color);
+    transition: background-color 0.3s;
+}
+
+.register-container {
+    padding: 2rem;
+    background: var(--header-bg-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+.register-container h2 {
+    margin-bottom: 1.5rem;
+    color: var(--text-color);
+    transition: color 0.3s;
+}
+
+.register-form .form-group {
+    margin-bottom: 1rem;
+    text-align: left;
+}
+
+.register-form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+    font-weight: 600;
+    transition: color 0.3s;
+}
+
+.register-form input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-sizing: border-box;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+
+.register-button {
+    width: 100%;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 4px;
+    background-color: #28a745; /* A green color for registration */
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.register-button:hover {
+    background-color: #218838;
+}
+
+.message-area {
+    margin-top: 1rem;
+    text-align: center;
+}
+
+.success-message {
+    color: #28a745;
+}
+
+.error-message {
+    color: #d93025;
+}
+
+.login-link {
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+}
+
+.login-link a {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.login-link a:hover {
+    text-decoration: underline;
+}
