@@ -7,6 +7,7 @@ const LoginPage: React.FC = () => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false); // New state for password visibility
     const [error, setError] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const navigate = useNavigate();
 
     const togglePasswordVisibility = () => {
@@ -16,9 +17,10 @@ const LoginPage: React.FC = () => {
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         setError(null);
+        setSuccessMessage(null); // Clear success message on new attempt
 
         try {
-            const response = await fetch('https://localhost:7100/login', {
+            const response = await fetch('http://localhost:5100/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -36,7 +38,10 @@ const LoginPage: React.FC = () => {
             
             if (data.accessToken) {
                 localStorage.setItem('accessToken', data.accessToken);
-                navigate('/products'); 
+                setSuccessMessage('Login successful! Redirecting...'); // Set success message
+                setTimeout(() => {
+                    navigate('/products'); 
+                }, 2000); // Redirect after 2 seconds
             } else {
                 throw new Error('Login failed: No access token received.');
             }
@@ -82,6 +87,7 @@ const LoginPage: React.FC = () => {
                     </div>
                     <button type="submit" className="login-button">Login</button>
                     {error && <p className="error-message">{error}</p>}
+                    {successMessage && <p className="success-message">{successMessage}</p>}
                 </form>
                 <div className="register-link">
                     <p>Don't have an account? <Link to="/register">Sign Up</Link></p>

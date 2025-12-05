@@ -74,6 +74,12 @@
     text-align: center;
 }
 
+.success-message {
+    color: #28a745; /* Green color for success messages */
+    margin-top: 1rem;
+    text-align: center;
+}
+
 .register-link {
     margin-top: 1.5rem;
     font-size: 0.9rem;
@@ -116,4 +122,3 @@
 .toggle-password-visibility:hover {
     background-color: rgba(0, 0, 0, 0.1); /* Subtle hover effect */
 }
-
