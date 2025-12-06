@@ -120,6 +120,19 @@ namespace Backend.DTOs
         // Stok durumu
         public bool? InStock { get; set; }
 
+        // EXCLUDE FILTERS - "Bu özellikleri istemiyor" filtreleri
+        // Hariç tutulacak markalar (virgülle ayrılmış: "Apple,Samsung")
+        public string? ExcludeBrands { get; set; }
+
+        // Hariç tutulacak kategoriler (virgülle ayrılmış: "1,2,3")
+        public string? ExcludeCategoryIds { get; set; }
+
+        // Maksimum fiyattan daha pahalı ürünleri hariç tut
+        public decimal? ExcludeAbovePrice { get; set; }
+
+        // Minimuma fiyattan daha ucuz ürünleri hariç tut
+        public decimal? ExcludeBelowPrice { get; set; }
+
         // Sıralama: "name_asc", "name_desc", "price_asc", "price_desc", "newest"
         public string? SortBy { get; set; } = "newest";
 

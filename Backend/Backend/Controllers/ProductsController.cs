@@ -71,7 +71,51 @@ namespace Backend.Controllers
                     query = query.Where(p => p.Stock > 0);
                 }
 
-                // 6. Sıralama
+                // 6. EXCLUDE FILTERS - "Bu özellikleri istemiyor" filtreleri
+                
+                // Hariç tutulacak markalar
+                if (!string.IsNullOrWhiteSpace(filterParams.ExcludeBrands))
+                {
+                    var excludedBrands = filterParams.ExcludeBrands
+                        .Split(',')
+                        .Select(b => b.Trim().ToLower())
+                        .ToList();
+                    
+                    query = query.Where(p => !excludedBrands.Contains(p.Brand.ToLower()));
+                    _logger.LogInformation($"Excluded brands: {string.Join(", ", excludedBrands)}");
+                }
+
+                // Hariç tutulacak kategoriler
+                if (!string.IsNullOrWhiteSpace(filterParams.ExcludeCategoryIds))
+                {
+                    var excludedCategoryIds = filterParams.ExcludeCategoryIds
+                        .Split(',')
+                        .Select(id => int.TryParse(id.Trim(), out var parsedId) ? parsedId : -1)
+                        .Where(id => id > 0)
+                        .ToList();
+                    
+                    if (excludedCategoryIds.Count > 0)
+                    {
+                        query = query.Where(p => !excludedCategoryIds.Contains(p.CategoryID));
+                        _logger.LogInformation($"Excluded category IDs: {string.Join(", ", excludedCategoryIds)}");
+                    }
+                }
+
+                // Maksimum fiyattan daha pahalı ürünleri hariç tut
+                if (filterParams.ExcludeAbovePrice.HasValue)
+                {
+                    query = query.Where(p => p.Price <= filterParams.ExcludeAbovePrice.Value);
+                    _logger.LogInformation($"Excluded products above price: {filterParams.ExcludeAbovePrice}");
+                }
+
+                // Minimuma fiyattan daha ucuz ürünleri hariç tut
+                if (filterParams.ExcludeBelowPrice.HasValue)
+                {
+                    query = query.Where(p => p.Price >= filterParams.ExcludeBelowPrice.Value);
+                    _logger.LogInformation($"Excluded products below price: {filterParams.ExcludeBelowPrice}");
+                }
+
+                // 7. Sıralama
                 query = filterParams.SortBy?.ToLower() switch
                 {
                     "name_asc" => query.OrderBy(p => p.ProductName),
@@ -85,7 +129,7 @@ namespace Backend.Controllers
                 // Toplam kayıt sayısı
                 var totalCount = await query.CountAsync();
 
-                // 7. Sayfalama
+                // 8. Sayfalama
                 var products = await query
                     .Skip((filterParams.PageNumber - 1) * filterParams.PageSize)
                     .Take(filterParams.PageSize)
@@ -197,7 +241,7 @@ namespace Backend.Controllers
                         Brand = p.Brand,
                         Price = p.Price,
                         ImageUrl = p.ImageUrl,
-                        CategoryName = p.Category.CategoryName,
+                        CategoryName = p.Category != null ? p.Category.CategoryName : "Unknown",
                         Stock = p.Stock,
                         IsActive = p.IsActive
                     })
@@ -234,7 +278,7 @@ namespace Backend.Controllers
                         Brand = p.Brand,
                         Price = p.Price,
                         ImageUrl = p.ImageUrl,
-                        CategoryName = p.Category.CategoryName,
+                        CategoryName = p.Category != null ? p.Category.CategoryName : "Unknown",
                         Stock = p.Stock,
                         IsActive = p.IsActive
                     })
@@ -538,8 +582,8 @@ namespace Backend.Controllers
 
                 _logger.LogWarning("Product with ID {ProductId} permanently deleted", id);
 
-                return Ok(ApiResponse<object>.SuccessResponse(
-                    null, 
+                return Ok(ApiResponse<string>.SuccessResponse(
+                    "Deleted", 
                     "Product permanently deleted"));
             }
             catch (Exception ex)
@@ -587,6 +631,267 @@ namespace Backend.Controllers
                 _logger.LogError(ex, "Error updating stock for product {ProductId}", id);
                 return StatusCode(500, ApiResponse<object>.FailureResponse(
                     "An error occurred while updating stock"));
+            }
+        }
+
+        // GET: api/products/{id}/related
+        // Aynı kategoriden benzer ürünleri getir (4 ürün - "Bunu da beğenebilirsiniz" için)
+        [HttpGet("{id}/related")]
+        public async Task<ActionResult<ApiResponse<List<ProductListDto>>>> GetRelatedProducts(int id)
+        {
+            try
+            {
+                // Orijinal ürünü bul
+                var product = await _context.Products
+                    .Where(p => p.ProductID == id && p.IsActive)
+                    .FirstOrDefaultAsync();
+
+                if (product == null)
+                {
+                    return NotFound(ApiResponse<List<ProductListDto>>.FailureResponse(
+                        "Product not found"));
+                }
+
+                // Aynı kategoriden başka ürünleri bul (max 4) + rastgele seç
+                var relatedProducts = await _context.Products
+                    .Include(p => p.Category)
+                    .Where(p => 
+                        p.CategoryID == product.CategoryID && 
+                        p.ProductID != id && 
+                        p.IsActive &&
+                        p.Stock > 0) // Stokta olan ürünleri göster
+                    .OrderBy(p => Guid.NewGuid()) // Rastgele sırala
+                    .Take(4)
+                    .Select(p => new ProductListDto
+                    {
+                        ProductID = p.ProductID,
+                        ProductName = p.ProductName,
+                        Brand = p.Brand,
+                        Price = p.Price,
+                        ImageUrl = p.ImageUrl,
+                        CategoryName = p.Category.CategoryName,
+                        Stock = p.Stock,
+                        IsActive = p.IsActive
+                    })
+                    .ToListAsync();
+
+                _logger.LogInformation(
+                    "Retrieved {Count} related products for product {ProductId} in category {CategoryId}",
+                    relatedProducts.Count, id, product.CategoryID);
+
+                return Ok(ApiResponse<List<ProductListDto>>.SuccessResponse(
+                    relatedProducts,
+                    $"Retrieved {relatedProducts.Count} related products"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving related products for product {ProductId}", id);
+                return StatusCode(500, ApiResponse<List<ProductListDto>>.FailureResponse(
+                    "An error occurred while retrieving related products"));
+            }
+        }
+
+        /// <summary>
+        /// Ürünün tüm spesifikasyonlarını getir
+        /// </summary>
+        [HttpGet("{id}/specifications")]
+        public async Task<ActionResult<ApiResponse<List<ProductSpecificationDto>>>> GetProductSpecifications(int id)
+        {
+            try
+            {
+                var product = await _context.Products.FindAsync(id);
+                if (product == null)
+                {
+                    return NotFound(ApiResponse<List<ProductSpecificationDto>>.FailureResponse(
+                        "Ürün bulunamadı"));
+                }
+
+                var specifications = await _context.ProductSpecifications
+                    .Where(s => s.ProductID == id)
+                    .Select(s => new ProductSpecificationDto
+                    {
+                        SpecID = s.SpecID,
+                        ProductID = s.ProductID,
+                        SpecName = s.SpecName,
+                        SpecValue = s.SpecValue
+                    })
+                    .ToListAsync();
+
+                _logger.LogInformation($"Ürün spesifikasyonları getirildi: ProductID={id}, Count={specifications.Count}");
+
+                return Ok(ApiResponse<List<ProductSpecificationDto>>.SuccessResponse(
+                    specifications,
+                    $"Ürün spesifikasyonları başarıyla getirildi"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ürün spesifikasyonları getirilirken hata oluştu");
+                return StatusCode(500, ApiResponse<List<ProductSpecificationDto>>.FailureResponse(
+                    "Ürün spesifikasyonları getirilirken bir hata oluştu"));
+            }
+        }
+
+        /// <summary>
+        /// Ürüne yeni spesifikasyon ekle (Admin Only)
+        /// </summary>
+        [HttpPost("{id}/specifications")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<ApiResponse<ProductSpecificationDto>>> AddProductSpecification(
+            [FromRoute] int id,
+            [FromBody] CreateProductSpecificationDto specDto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ApiResponse<ProductSpecificationDto>.FailureResponse(
+                        "Validation failed",
+                        ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList()
+                    ));
+                }
+
+                var product = await _context.Products.FindAsync(id);
+                if (product == null)
+                {
+                    return NotFound(ApiResponse<ProductSpecificationDto>.FailureResponse(
+                        "Ürün bulunamadı"));
+                }
+
+                var specification = new ProductSpecification
+                {
+                    ProductID = id,
+                    SpecName = specDto.SpecName,
+                    SpecValue = specDto.SpecValue
+                };
+
+                _context.ProductSpecifications.Add(specification);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Yeni spesifikasyon eklendi: ProductID={id}, SpecName={specDto.SpecName}");
+
+                var resultDto = new ProductSpecificationDto
+                {
+                    SpecID = specification.SpecID,
+                    ProductID = specification.ProductID,
+                    SpecName = specification.SpecName,
+                    SpecValue = specification.SpecValue
+                };
+
+                return CreatedAtAction(nameof(GetProductSpecifications), new { id = id },
+                    ApiResponse<ProductSpecificationDto>.SuccessResponse(
+                        resultDto,
+                        "Spesifikasyon başarıyla eklendi"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Spesifikasyon eklenirken hata oluştu");
+                return StatusCode(500, ApiResponse<ProductSpecificationDto>.FailureResponse(
+                    "Spesifikasyon eklenirken bir hata oluştu"));
+            }
+        }
+
+        /// <summary>
+        /// Ürün spesifikasyonunu güncelle (Admin Only)
+        /// </summary>
+        [HttpPut("{id}/specifications/{specId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<ApiResponse<ProductSpecificationDto>>> UpdateProductSpecification(
+            [FromRoute] int id,
+            [FromRoute] int specId,
+            [FromBody] UpdateProductSpecificationDto specDto)
+        {
+            try
+            {
+                var product = await _context.Products.FindAsync(id);
+                if (product == null)
+                {
+                    return NotFound(ApiResponse<ProductSpecificationDto>.FailureResponse(
+                        "Ürün bulunamadı"));
+                }
+
+                var specification = await _context.ProductSpecifications
+                    .FirstOrDefaultAsync(s => s.SpecID == specId && s.ProductID == id);
+
+                if (specification == null)
+                {
+                    return NotFound(ApiResponse<ProductSpecificationDto>.FailureResponse(
+                        "Spesifikasyon bulunamadı"));
+                }
+
+                if (!string.IsNullOrWhiteSpace(specDto.SpecName))
+                {
+                    specification.SpecName = specDto.SpecName;
+                }
+
+                if (!string.IsNullOrWhiteSpace(specDto.SpecValue))
+                {
+                    specification.SpecValue = specDto.SpecValue;
+                }
+
+                _context.ProductSpecifications.Update(specification);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Spesifikasyon güncellendi: SpecID={specId}, ProductID={id}");
+
+                var resultDto = new ProductSpecificationDto
+                {
+                    SpecID = specification.SpecID,
+                    ProductID = specification.ProductID,
+                    SpecName = specification.SpecName,
+                    SpecValue = specification.SpecValue
+                };
+
+                return Ok(ApiResponse<ProductSpecificationDto>.SuccessResponse(
+                    resultDto,
+                    "Spesifikasyon başarıyla güncellendi"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Spesifikasyon güncellenirken hata oluştu");
+                return StatusCode(500, ApiResponse<ProductSpecificationDto>.FailureResponse(
+                    "Spesifikasyon güncellenirken bir hata oluştu"));
+            }
+        }
+
+        /// <summary>
+        /// Ürün spesifikasyonunu sil (Admin Only)
+        /// </summary>
+        [HttpDelete("{id}/specifications/{specId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<ApiResponse<string>>> DeleteProductSpecification(
+            [FromRoute] int id,
+            [FromRoute] int specId)
+        {
+            try
+            {
+                var product = await _context.Products.FindAsync(id);
+                if (product == null)
+                {
+                    return NotFound(ApiResponse<string>.FailureResponse("Ürün bulunamadı"));
+                }
+
+                var specification = await _context.ProductSpecifications
+                    .FirstOrDefaultAsync(s => s.SpecID == specId && s.ProductID == id);
+
+                if (specification == null)
+                {
+                    return NotFound(ApiResponse<string>.FailureResponse("Spesifikasyon bulunamadı"));
+                }
+
+                _context.ProductSpecifications.Remove(specification);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Spesifikasyon silindi: SpecID={specId}, ProductID={id}");
+
+                return Ok(ApiResponse<string>.SuccessResponse(
+                    "Silindi",
+                    "Spesifikasyon başarıyla silindi"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Spesifikasyon silinirken hata oluştu");
+                return StatusCode(500, ApiResponse<string>.FailureResponse(
+                    "Spesifikasyon silinirken bir hata oluştu"));
             }
         }
     }

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Backend.Data;
 using Backend.Models;
+using Backend.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -64,7 +65,9 @@ builder.Services.AddCors(options =>
                 "https://localhost:5173",  // Vite dev server (HTTPS)
                 "https://localhost:3000",  // Alternative frontend port (HTTPS)
                 "https://localhost:7100",  // HTTPS backend
-                "http://localhost:5100"    // HTTP backend
+                "http://localhost:5100",   // HTTP backend
+                "https://localhost:5100"   // HTTPS backend
+
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
@@ -135,6 +138,8 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseCors("AllowFrontend");
+
+app.UseExceptionHandling();
 
 app.UseAuthentication();
 app.UseAuthorization();

@@ -18,6 +18,8 @@ namespace Backend.Data
         public DbSet<ProductReview> ProductReviews { get; set; }
         public DbSet<ProductImage> ProductImages { get; set; }
         public DbSet<ProductSpecification> ProductSpecifications { get; set; }
+        public DbSet<OrderReturn> OrderReturns { get; set; }
+        public DbSet<Favorite> Favorites { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
