@@ -9,6 +9,7 @@ namespace Backend.DTOs
     {
         public int ProductReviewID { get; set; }
         public int ProductID { get; set; }
+        public string? ProductName { get; set; }
         public string UserName { get; set; } = null!;
         public int Rating { get; set; } // 1-5
         public string? ReviewText { get; set; }

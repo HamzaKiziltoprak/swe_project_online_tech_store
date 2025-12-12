@@ -444,5 +444,76 @@ namespace Backend.Controllers
                 return StatusCode(500, ApiResponse<ReviewDto>.FailureResponse("Review onaylanırken bir hata oluştu"));
             }
         }
+
+        /// <summary>
+        /// Reject a review (Admin/Moderator only) - Removes the review
+        /// </summary>
+        [HttpPost("{reviewId}/reject")]
+        [Authorize(Roles = "Admin,Moderator")]
+        public async Task<ActionResult<ApiResponse<string>>> RejectReview(
+            [FromRoute] int productId,
+            [FromRoute] int reviewId)
+        {
+            try
+            {
+                var review = await _context.ProductReviews
+                    .FirstOrDefaultAsync(r => r.ReviewID == reviewId && r.ProductID == productId);
+
+                if (review == null)
+                {
+                    return NotFound(ApiResponse<string>.FailureResponse("Review bulunamadı"));
+                }
+
+                // Review'ı reddet (sil)
+                _context.ProductReviews.Remove(review);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Review reddedildi ve silindi: ReviewID={reviewId}, ProductID={productId}");
+
+                return Ok(ApiResponse<string>.SuccessResponse("Review başarıyla reddedildi ve silindi", "Review başarıyla reddedildi"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Review reddedilirken hata oluştu");
+                return StatusCode(500, ApiResponse<string>.FailureResponse("Review reddedilirken bir hata oluştu"));
+            }
+        }
+
+        /// <summary>
+        /// Get all pending reviews (Admin/Moderator only)
+        /// </summary>
+        [HttpGet("/api/reviews/pending")]
+        [Authorize(Roles = "Admin,Moderator")]
+        public async Task<ActionResult<ApiResponse<List<ReviewDto>>>> GetPendingReviews()
+        {
+            try
+            {
+                var pendingReviews = await _context.ProductReviews
+                    .Where(r => !r.IsApproved)
+                    .Include(r => r.User)
+                    .Include(r => r.Product)
+                    .OrderBy(r => r.ReviewDate)
+                    .ToListAsync();
+
+                var reviewDtos = pendingReviews.Select(r => new ReviewDto
+                {
+                    ProductReviewID = r.ReviewID,
+                    ProductID = r.ProductID,
+                    ProductName = r.Product.ProductName,
+                    UserName = r.User?.UserName ?? "Anonymous",
+                    Rating = r.Rating,
+                    ReviewText = r.Comment,
+                    ReviewDate = r.ReviewDate,
+                    IsVerifiedPurchase = r.IsApproved
+                }).ToList();
+
+                return Ok(ApiResponse<List<ReviewDto>>.SuccessResponse(reviewDtos, $"{reviewDtos.Count} bekleyen review bulundu"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Bekleyen review'lar getirilirken hata oluştu");
+                return StatusCode(500, ApiResponse<List<ReviewDto>>.FailureResponse("Bekleyen review'lar getirilirken bir hata oluştu"));
+            }
+        }
     }
 }

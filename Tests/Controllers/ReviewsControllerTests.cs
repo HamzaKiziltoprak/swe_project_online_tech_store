@@ -267,6 +267,111 @@ namespace Tests.Controllers
             Assert.True(dbReview.IsApproved);
         }
 
+        [Fact]
+        public async Task RejectReview_ShouldDeleteReview()
+        {
+            // Arrange
+            var productId = 1;
+            var reviewId = 1;
+            var userId = 1;
+
+            var user = new User { Id = userId, UserName = "testuser", FirstName = "Test", LastName = "User" };
+            _context.Users.Add(user);
+
+            var product = new Product { ProductID = productId, ProductName = "Test Product", Price = 100, Stock = 10, Brand = "Test", Description = "Test", ImageUrl = "test.jpg" };
+            _context.Products.Add(product);
+
+            var review = new ProductReview { ReviewID = reviewId, ProductID = productId, UserID = userId, IsApproved = false, Comment = "Test" };
+            _context.ProductReviews.Add(review);
+            await _context.SaveChangesAsync();
+
+            // Act
+            var result = await _controller.RejectReview(productId, reviewId);
+
+            // Assert
+            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<string>>(actionResult.Value);
+            Assert.True(apiResponse.Success);
+
+            // Veritabanından silindiğini kontrol et
+            var dbReview = await _context.ProductReviews.FindAsync(reviewId);
+            Assert.Null(dbReview);
+        }
+
+        [Fact]
+        public async Task RejectReview_ShouldReturnNotFound_WhenReviewDoesNotExist()
+        {
+            // Arrange
+            var productId = 1;
+            var reviewId = 999;
+
+            // Act
+            var result = await _controller.RejectReview(productId, reviewId);
+
+            // Assert
+            var actionResult = Assert.IsType<NotFoundObjectResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<string>>(actionResult.Value);
+            Assert.False(apiResponse.Success);
+        }
+
+        [Fact]
+        public async Task GetPendingReviews_ShouldReturnOnlyUnapprovedReviews()
+        {
+            // Arrange
+            var userId = 1;
+            var productId = 1;
+
+            var user = new User { Id = userId, UserName = "testuser", FirstName = "Test", LastName = "User" };
+            _context.Users.Add(user);
+
+            var product = new Product { ProductID = productId, ProductName = "Test Product", Price = 100, Stock = 10, Brand = "Test", Description = "Test", ImageUrl = "test.jpg" };
+            _context.Products.Add(product);
+
+            var approvedReview = new ProductReview { ReviewID = 1, ProductID = productId, UserID = userId, IsApproved = true, Comment = "Approved", Rating = 5 };
+            var pendingReview1 = new ProductReview { ReviewID = 2, ProductID = productId, UserID = userId, IsApproved = false, Comment = "Pending 1", Rating = 4 };
+            var pendingReview2 = new ProductReview { ReviewID = 3, ProductID = productId, UserID = userId, IsApproved = false, Comment = "Pending 2", Rating = 3 };
+
+            _context.ProductReviews.AddRange(approvedReview, pendingReview1, pendingReview2);
+            await _context.SaveChangesAsync();
+
+            // Act
+            var result = await _controller.GetPendingReviews();
+
+            // Assert
+            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<List<ReviewDto>>>(actionResult.Value);
+            Assert.True(apiResponse.Success);
+            Assert.Equal(2, apiResponse.Data.Count); // Sadece 2 bekleyen review olmalı
+            Assert.All(apiResponse.Data, r => Assert.False(r.IsVerifiedPurchase)); // Hepsi onaysız olmalı
+        }
+
+        [Fact]
+        public async Task GetPendingReviews_ShouldReturnEmptyList_WhenNoPendingReviews()
+        {
+            // Arrange
+            var userId = 1;
+            var productId = 1;
+
+            var user = new User { Id = userId, UserName = "testuser", FirstName = "Test", LastName = "User" };
+            _context.Users.Add(user);
+
+            var product = new Product { ProductID = productId, ProductName = "Test Product", Price = 100, Stock = 10, Brand = "Test", Description = "Test", ImageUrl = "test.jpg" };
+            _context.Products.Add(product);
+
+            var approvedReview = new ProductReview { ReviewID = 1, ProductID = productId, UserID = userId, IsApproved = true, Comment = "Approved", Rating = 5 };
+            _context.ProductReviews.Add(approvedReview);
+            await _context.SaveChangesAsync();
+
+            // Act
+            var result = await _controller.GetPendingReviews();
+
+            // Assert
+            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<List<ReviewDto>>>(actionResult.Value);
+            Assert.True(apiResponse.Success);
+            Assert.Empty(apiResponse.Data); // Bekleyen review yok
+        }
+
         // Test içinde bir kullanıcıyı login etmiş gibi göstermek için kullanılan yardımcı fonksiyon.
         private void SetupHttpContextWithUser(int userId)
         {
