@@ -14,11 +14,15 @@ namespace Backend.Models
         [StringLength(200)]
         public string ProductName { get; set; } = null!;
 
-        [Required]
-        [StringLength(50)]
-        public string Brand { get; set; } = null!;
-
         public string Description { get; set; } = null!;
+
+        // Brand Foreign Key
+        [Required]
+        public int BrandID { get; set; }
+
+        [ForeignKey("BrandID")]
+        [ValidateNever]
+        public virtual Brand Brand { get; set; } = null!;
 
         [Required]
         [Column(TypeName = "decimal(18,2)")]

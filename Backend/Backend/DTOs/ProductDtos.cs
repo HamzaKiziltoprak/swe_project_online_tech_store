@@ -7,6 +7,7 @@ namespace Backend.DTOs
     {
         public int ProductID { get; set; }
         public string ProductName { get; set; } = null!;
+        public int BrandID { get; set; }
         public string Brand { get; set; } = null!;
         public decimal Price { get; set; }
         public string ImageUrl { get; set; } = null!;
@@ -22,6 +23,7 @@ namespace Backend.DTOs
     {
         public int ProductID { get; set; }
         public string ProductName { get; set; } = null!;
+        public int BrandID { get; set; }
         public string Brand { get; set; } = null!;
         public string Description { get; set; } = null!;
         public decimal Price { get; set; }
@@ -48,8 +50,7 @@ namespace Backend.DTOs
         public string ProductName { get; set; } = null!;
 
         [Required(ErrorMessage = "Brand is required")]
-        [StringLength(50, ErrorMessage = "Brand name cannot exceed 50 characters")]
-        public string Brand { get; set; } = null!;
+        public int BrandID { get; set; }
 
         [Required(ErrorMessage = "Description is required")]
         [StringLength(2000, ErrorMessage = "Description cannot exceed 2000 characters")]
@@ -81,8 +82,7 @@ namespace Backend.DTOs
         public string ProductName { get; set; } = null!;
 
         [Required(ErrorMessage = "Brand is required")]
-        [StringLength(50, ErrorMessage = "Brand name cannot exceed 50 characters")]
-        public string Brand { get; set; } = null!;
+        public int BrandID { get; set; }
 
         [Required(ErrorMessage = "Description is required")]
         [StringLength(2000, ErrorMessage = "Description cannot exceed 2000 characters")]
@@ -113,7 +113,7 @@ namespace Backend.DTOs
         public string? SearchTerm { get; set; }
 
         // Marka filtresi
-        public string? Brand { get; set; }
+        public int? BrandID { get; set; }
 
         // Kategori filtresi
         public int? CategoryId { get; set; }

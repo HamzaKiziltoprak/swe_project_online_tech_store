@@ -48,7 +48,9 @@ namespace Backend.Controllers
                 var favorites = await _context.Favorites
                     .Where(f => f.UserID == userIdInt)
                     .Include(f => f.Product)
-                    .ThenInclude(p => p.Category)
+                        .ThenInclude(p => p.Brand)
+                    .Include(f => f.Product)
+                        .ThenInclude(p => p.Category)
                     .OrderByDescending(f => f.CreatedAt)
                     .Skip((pageNumber - 1) * pageSize)
                     .Take(pageSize)
@@ -58,7 +60,7 @@ namespace Backend.Controllers
                         UserID = f.UserID,
                         ProductID = f.ProductID,
                         ProductName = f.Product.ProductName,
-                        Brand = f.Product.Brand,
+                        Brand = f.Product.Brand.BrandName,
                         Price = f.Product.Price,
                         ImageUrl = f.Product.ImageUrl,
                         Stock = f.Product.Stock,

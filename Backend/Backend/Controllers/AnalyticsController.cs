@@ -88,18 +88,19 @@ namespace Backend.Controllers
             {
                 var topProducts = await _context.OrderItems
                     .Include(oi => oi.Product)
+                        .ThenInclude(p => p.Brand)
                     .GroupBy(oi => new
                     {
                         oi.ProductID,
                         oi.Product.ProductName,
-                        oi.Product.Brand,
+                        BrandName = oi.Product.Brand.BrandName,
                         oi.Product.ImageUrl
                     })
                     .Select(g => new TopSellingProductDto
                     {
                         ProductID = g.Key.ProductID,
                         ProductName = g.Key.ProductName,
-                        Brand = g.Key.Brand,
+                        Brand = g.Key.BrandName,
                         ImageUrl = g.Key.ImageUrl,
                         TotalQuantitySold = g.Sum(oi => oi.Quantity),
                         TotalRevenue = g.Sum(oi => oi.UnitPrice * oi.Quantity),

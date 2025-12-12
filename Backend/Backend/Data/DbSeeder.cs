@@ -77,6 +77,9 @@ namespace Backend.Data
             // Seed Categories
             await SeedCategoriesAsync(context, logger);
 
+            // Seed Brands
+            await SeedBrandsAsync(context, logger);
+
             // Seed Products
             await SeedProductsAsync(context, logger);
 
@@ -113,6 +116,40 @@ namespace Backend.Data
             logger.LogInformation($"Seeded {categories.Count} categories successfully.");
         }
 
+        private static async Task SeedBrandsAsync(DataContext context, ILogger<Program> logger)
+        {
+            if (await context.Brands.AnyAsync())
+            {
+                logger.LogInformation("Brands already exist. Skipping brand seeding.");
+                return;
+            }
+
+            logger.LogInformation("Seeding brands...");
+
+            var brands = new List<Brand>
+            {
+                new Brand { BrandName = "AMD", Description = "Advanced Micro Devices - Leading processor and graphics card manufacturer", IsActive = true },
+                new Brand { BrandName = "Intel", Description = "World's leading semiconductor chip manufacturer", IsActive = true },
+                new Brand { BrandName = "NVIDIA", Description = "Leader in visual computing and AI technologies", IsActive = true },
+                new Brand { BrandName = "ASUS", Description = "Leading technology company focused on motherboards and components", IsActive = true },
+                new Brand { BrandName = "MSI", Description = "Micro-Star International - Gaming hardware manufacturer", IsActive = true },
+                new Brand { BrandName = "Corsair", Description = "High-performance gaming peripherals and components", IsActive = true },
+                new Brand { BrandName = "G.Skill", Description = "Performance memory modules manufacturer", IsActive = true },
+                new Brand { BrandName = "Samsung", Description = "Leading technology conglomerate and storage solutions", IsActive = true },
+                new Brand { BrandName = "Western Digital", Description = "WD - Data storage solutions and hard drives", IsActive = true },
+                new Brand { BrandName = "EVGA", Description = "Graphics cards and power supply manufacturer", IsActive = true },
+                new Brand { BrandName = "Cooler Master", Description = "PC cooling solutions and cases manufacturer", IsActive = true },
+                new Brand { BrandName = "NZXT", Description = "Premium PC cases and cooling solutions", IsActive = true },
+                new Brand { BrandName = "be quiet!", Description = "German manufacturer of quiet PC components", IsActive = true },
+                new Brand { BrandName = "Gigabyte", Description = "Motherboards, graphics cards, and PC components", IsActive = true },
+                new Brand { BrandName = "Seagate", Description = "Hard drive and storage solutions manufacturer", IsActive = true }
+            };
+
+            context.Brands.AddRange(brands);
+            await context.SaveChangesAsync();
+            logger.LogInformation($"Seeded {brands.Count} brands successfully.");
+        }
+
         private static async Task SeedProductsAsync(DataContext context, ILogger<Program> logger)
         {
             if (await context.Products.AnyAsync())
@@ -130,6 +167,13 @@ namespace Backend.Data
                 return;
             }
 
+            var brands = await context.Brands.ToListAsync();
+            if (brands.Count == 0)
+            {
+                logger.LogWarning("No brands found. Please seed brands first.");
+                return;
+            }
+
             var products = new List<Product>
             {
                 // Processors
@@ -139,7 +183,7 @@ namespace Backend.Data
                     Description = "6-core, 12-thread processor with 3.7 GHz base clock",
                     Price = 299.99m,
                     Stock = 25,
-                    Brand = "AMD",
+                    BrandID = brands.FirstOrDefault(b => b.BrandName == "AMD")?.BrandID ?? 1,
                     CategoryID = categories.FirstOrDefault(c => c.CategoryName == "Processors")?.CategoryID ?? 1,
                     ImageUrl = "https://via.placeholder.com/300x300?text=Ryzen+5600X"
                 },
@@ -149,7 +193,7 @@ namespace Backend.Data
                     Description = "12-core, 20-thread processor with up to 5.0 GHz",
                     Price = 389.99m,
                     Stock = 18,
-                    Brand = "Intel",
+                    BrandID = brands.FirstOrDefault(b => b.BrandName == "Intel")?.BrandID ?? 2,
                     CategoryID = categories.FirstOrDefault(c => c.CategoryName == "Processors")?.CategoryID ?? 1,
                     ImageUrl = "https://via.placeholder.com/300x300?text=i7-12700K"
                 },
@@ -161,7 +205,7 @@ namespace Backend.Data
                     Description = "8GB GDDR6X, 384-bit memory interface, excellent for 4K gaming",
                     Price = 799.99m,
                     Stock = 12,
-                    Brand = "NVIDIA",
+                    BrandID = brands.FirstOrDefault(b => b.BrandName == "NVIDIA")?.BrandID ?? 3,
                     CategoryID = categories.FirstOrDefault(c => c.CategoryName == "Graphics Cards")?.CategoryID ?? 2,
                     ImageUrl = "https://via.placeholder.com/300x300?text=RTX+3070+Ti"
                 },
@@ -171,7 +215,7 @@ namespace Backend.Data
                     Description = "16GB GDDR6, 256-bit memory, high performance RDNA2 architecture",
                     Price = 649.99m,
                     Stock = 15,
-                    Brand = "AMD",
+                    BrandID = brands.FirstOrDefault(b => b.BrandName == "AMD")?.BrandID ?? 1,
                     CategoryID = categories.FirstOrDefault(c => c.CategoryName == "Graphics Cards")?.CategoryID ?? 2,
                     ImageUrl = "https://via.placeholder.com/300x300?text=RX+6800+XT"
                 },
@@ -183,7 +227,7 @@ namespace Backend.Data
                     Description = "Socket AM4, PCIe 4.0, WiFi 6, Premium features",
                     Price = 199.99m,
                     Stock = 20,
-                    Brand = "ASUS",
+                    BrandID = brands.FirstOrDefault(b => b.BrandName == "ASUS")?.BrandID ?? 4,
                     CategoryID = categories.FirstOrDefault(c => c.CategoryName == "Motherboards")?.CategoryID ?? 3,
                     ImageUrl = "https://via.placeholder.com/300x300?text=ROG+Strix+B550"
                 },
@@ -193,7 +237,7 @@ namespace Backend.Data
                     Description = "LGA1700 Socket, DDR5 Ready, PCIe 5.0",
                     Price = 269.99m,
                     Stock = 16,
-                    Brand = "MSI",
+                    BrandID = brands.FirstOrDefault(b => b.BrandName == "MSI")?.BrandID ?? 5,
                     CategoryID = categories.FirstOrDefault(c => c.CategoryName == "Motherboards")?.CategoryID ?? 3,
                     ImageUrl = "https://via.placeholder.com/300x300?text=MPG+Z690+Edge"
                 },
@@ -205,7 +249,7 @@ namespace Backend.Data
                     Description = "DDR4, 3600MHz, RGB Lighting, CAS Latency 18",
                     Price = 79.99m,
                     Stock = 30,
-                    Brand = "Corsair",
+                    BrandID = brands.FirstOrDefault(b => b.BrandName == "Corsair")?.BrandID ?? 6,
                     CategoryID = categories.FirstOrDefault(c => c.CategoryName == "RAM Memory")?.CategoryID ?? 4,
                     ImageUrl = "https://via.placeholder.com/300x300?text=Vengeance+RGB+Pro"
                 },
@@ -215,7 +259,7 @@ namespace Backend.Data
                     Description = "DDR5, 6000MHz, Gaming Performance, EXPO",
                     Price = 199.99m,
                     Stock = 22,
-                    Brand = "G.Skill",
+                    BrandID = brands.FirstOrDefault(b => b.BrandName == "G.Skill")?.BrandID ?? 7,
                     CategoryID = categories.FirstOrDefault(c => c.CategoryName == "RAM Memory")?.CategoryID ?? 4,
                     ImageUrl = "https://via.placeholder.com/300x300?text=Trident+Z5"
                 },
@@ -227,7 +271,7 @@ namespace Backend.Data
                     Description = "NVMe M.2 SSD, PCIe 4.0, Read speed up to 4500MB/s",
                     Price = 119.99m,
                     Stock = 35,
-                    Brand = "Samsung",
+                    BrandID = brands.FirstOrDefault(b => b.BrandName == "Samsung")?.BrandID ?? 8,
                     CategoryID = categories.FirstOrDefault(c => c.CategoryName == "Storage Devices")?.CategoryID ?? 5,
                     ImageUrl = "https://via.placeholder.com/300x300?text=970+EVO+Plus"
                 },
@@ -237,7 +281,7 @@ namespace Backend.Data
                     Description = "3.5inch, 5400 RPM, Reliable storage solution",
                     Price = 89.99m,
                     Stock = 28,
-                    Brand = "Western Digital",
+                    BrandID = brands.FirstOrDefault(b => b.BrandName == "Western Digital")?.BrandID ?? 9,
                     CategoryID = categories.FirstOrDefault(c => c.CategoryName == "Storage Devices")?.CategoryID ?? 5,
                     ImageUrl = "https://via.placeholder.com/300x300?text=WD+Blue+4TB"
                 },
@@ -249,7 +293,7 @@ namespace Backend.Data
                     Description = "850W, 80+ Gold Certified, Modular Cables",
                     Price = 139.99m,
                     Stock = 18,
-                    Brand = "Corsair",
+                    BrandID = brands.FirstOrDefault(b => b.BrandName == "Corsair")?.BrandID ?? 6,
                     CategoryID = categories.FirstOrDefault(c => c.CategoryName == "Power Supplies")?.CategoryID ?? 6,
                     ImageUrl = "https://via.placeholder.com/300x300?text=RM850x"
                 },
@@ -259,7 +303,7 @@ namespace Backend.Data
                     Description = "750W, 80+ Gold, ATX 3.0 Ready, Compact",
                     Price = 129.99m,
                     Stock = 21,
-                    Brand = "EVGA",
+                    BrandID = brands.FirstOrDefault(b => b.BrandName == "EVGA")?.BrandID ?? 10,
                     CategoryID = categories.FirstOrDefault(c => c.CategoryName == "Power Supplies")?.CategoryID ?? 6,
                     ImageUrl = "https://via.placeholder.com/300x300?text=SuperNOVA+750"
                 }

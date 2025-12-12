@@ -29,6 +29,7 @@ namespace Backend.Controllers
             {
                 var query = _context.Products
                     .Include(p => p.Category)
+                    .Include(p => p.Brand)
                     .Where(p => p.IsActive)
                     .AsQueryable();
 
@@ -39,13 +40,13 @@ namespace Backend.Controllers
                     query = query.Where(p => 
                         p.ProductName.ToLower().Contains(searchTerm) || 
                         p.Description.ToLower().Contains(searchTerm) ||
-                        p.Brand.ToLower().Contains(searchTerm));
+                        p.Brand.BrandName.ToLower().Contains(searchTerm));
                 }
 
                 // 2. Marka filtresi
-                if (!string.IsNullOrWhiteSpace(filterParams.Brand))
+                if (filterParams.BrandID.HasValue)
                 {
-                    query = query.Where(p => p.Brand.ToLower() == filterParams.Brand.ToLower());
+                    query = query.Where(p => p.BrandID == filterParams.BrandID.Value);
                 }
 
                 // 3. Kategori filtresi
@@ -73,18 +74,6 @@ namespace Backend.Controllers
 
                 // 6. EXCLUDE FILTERS - "Bu özellikleri istemiyor" filtreleri
                 
-                // Hariç tutulacak markalar
-                if (!string.IsNullOrWhiteSpace(filterParams.ExcludeBrands))
-                {
-                    var excludedBrands = filterParams.ExcludeBrands
-                        .Split(',')
-                        .Select(b => b.Trim().ToLower())
-                        .ToList();
-                    
-                    query = query.Where(p => !excludedBrands.Contains(p.Brand.ToLower()));
-                    _logger.LogInformation($"Excluded brands: {string.Join(", ", excludedBrands)}");
-                }
-
                 // Hariç tutulacak kategoriler
                 if (!string.IsNullOrWhiteSpace(filterParams.ExcludeCategoryIds))
                 {
@@ -137,7 +126,8 @@ namespace Backend.Controllers
                     {
                         ProductID = p.ProductID,
                         ProductName = p.ProductName,
-                        Brand = p.Brand,
+                        BrandID = p.BrandID,
+                        Brand = p.Brand.BrandName,
                         Price = p.Price,
                         ImageUrl = p.ImageUrl,
                         CategoryName = p.Category.CategoryName,
@@ -176,6 +166,7 @@ namespace Backend.Controllers
             {
                 var product = await _context.Products
                     .Include(p => p.Category)
+                    .Include(p => p.Brand)
                     .Include(p => p.ProductReviews)
                     .FirstOrDefaultAsync(p => p.ProductID == id);
 
@@ -189,7 +180,8 @@ namespace Backend.Controllers
                 {
                     ProductID = product.ProductID,
                     ProductName = product.ProductName,
-                    Brand = product.Brand,
+                    BrandID = product.BrandID,
+                    Brand = product.Brand.BrandName,
                     Description = product.Description,
                     Price = product.Price,
                     Stock = product.Stock,
@@ -232,13 +224,15 @@ namespace Backend.Controllers
 
                 var products = await _context.Products
                     .Include(p => p.Category)
+                    .Include(p => p.Brand)
                     .Where(p => p.CategoryID == categoryId && p.IsActive)
                     .OrderByDescending(p => p.CreatedAt)
                     .Select(p => new ProductListDto
                     {
                         ProductID = p.ProductID,
                         ProductName = p.ProductName,
-                        Brand = p.Brand,
+                        BrandID = p.BrandID,
+                        Brand = p.Brand.BrandName,
                         Price = p.Price,
                         ImageUrl = p.ImageUrl,
                         CategoryName = p.Category != null ? p.Category.CategoryName : "Unknown",
@@ -268,6 +262,7 @@ namespace Backend.Controllers
             {
                 var products = await _context.Products
                     .Include(p => p.Category)
+                    .Include(p => p.Brand)
                     .Where(p => p.IsActive && p.Stock > 0)
                     .OrderByDescending(p => p.CreatedAt)
                     .Take(8)
@@ -275,7 +270,8 @@ namespace Backend.Controllers
                     {
                         ProductID = p.ProductID,
                         ProductName = p.ProductName,
-                        Brand = p.Brand,
+                        BrandID = p.BrandID,
+                        Brand = p.Brand.BrandName,
                         Price = p.Price,
                         ImageUrl = p.ImageUrl,
                         CategoryName = p.Category != null ? p.Category.CategoryName : "Unknown",
@@ -296,31 +292,8 @@ namespace Backend.Controllers
             }
         }
 
-        // GET: api/products/brands
-        // Tüm marka isimlerini getir (Filtreleme için)
-        [HttpGet("brands")]
-        public async Task<ActionResult<ApiResponse<List<string>>>> GetBrands()
-        {
-            try
-            {
-                var brands = await _context.Products
-                    .Where(p => p.IsActive)
-                    .Select(p => p.Brand)
-                    .Distinct()
-                    .OrderBy(b => b)
-                    .ToListAsync();
-
-                return Ok(ApiResponse<List<string>>.SuccessResponse(
-                    brands, 
-                    "Brands retrieved successfully"));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving brands");
-                return StatusCode(500, ApiResponse<List<string>>.FailureResponse(
-                    "An error occurred while retrieving brands"));
-            }
-        }
+        // NOTE: Brand management moved to BrandsController
+        // Use GET /api/brands for brand list
 
         // POST: api/products
         // Yeni ürün ekle (Sadece Admin)
@@ -340,6 +313,14 @@ namespace Backend.Controllers
 
             try
             {
+                // Brand kontrolü
+                var brandExists = await _context.Brands.AnyAsync(b => b.BrandID == productDto.BrandID);
+                if (!brandExists)
+                {
+                    return BadRequest(ApiResponse<ProductDetailDto>.FailureResponse(
+                        $"Brand with ID {productDto.BrandID} does not exist"));
+                }
+
                 // Kategori kontrolü
                 var categoryExists = await _context.Categories.AnyAsync(c => c.CategoryID == productDto.CategoryID);
                 if (!categoryExists)
@@ -360,7 +341,7 @@ namespace Backend.Controllers
                 var product = new Product
                 {
                     ProductName = productDto.ProductName,
-                    Brand = productDto.Brand,
+                    BrandID = productDto.BrandID,
                     Description = productDto.Description,
                     Price = productDto.Price,
                     Stock = productDto.Stock,
@@ -376,13 +357,15 @@ namespace Backend.Controllers
                 // Eklenen ürünü detaylarıyla birlikte döndür
                 var createdProduct = await _context.Products
                     .Include(p => p.Category)
+                    .Include(p => p.Brand)
                     .FirstAsync(p => p.ProductID == product.ProductID);
 
                 var resultDto = new ProductDetailDto
                 {
                     ProductID = createdProduct.ProductID,
                     ProductName = createdProduct.ProductName,
-                    Brand = createdProduct.Brand,
+                    BrandID = createdProduct.BrandID,
+                    Brand = createdProduct.Brand.BrandName,
                     Description = createdProduct.Description,
                     Price = createdProduct.Price,
                     Stock = createdProduct.Stock,
@@ -432,12 +415,21 @@ namespace Backend.Controllers
             {
                 var product = await _context.Products
                     .Include(p => p.Category)
+                    .Include(p => p.Brand)
                     .FirstOrDefaultAsync(p => p.ProductID == id);
 
                 if (product == null)
                 {
                     return NotFound(ApiResponse<ProductDetailDto>.FailureResponse(
                         $"Product with ID {id} not found"));
+                }
+
+                // Brand kontrolü
+                var brandExists = await _context.Brands.AnyAsync(b => b.BrandID == productDto.BrandID);
+                if (!brandExists)
+                {
+                    return BadRequest(ApiResponse<ProductDetailDto>.FailureResponse(
+                        $"Brand with ID {productDto.BrandID} does not exist"));
                 }
 
                 // Kategori kontrolü
@@ -460,7 +452,7 @@ namespace Backend.Controllers
 
                 // Güncelle
                 product.ProductName = productDto.ProductName;
-                product.Brand = productDto.Brand;
+                product.BrandID = productDto.BrandID;
                 product.Description = productDto.Description;
                 product.Price = productDto.Price;
                 product.Stock = productDto.Stock;
@@ -473,6 +465,7 @@ namespace Backend.Controllers
                 // Güncellenmiş ürünü döndür
                 var updatedProduct = await _context.Products
                     .Include(p => p.Category)
+                    .Include(p => p.Brand)
                     .Include(p => p.ProductReviews)
                     .FirstAsync(p => p.ProductID == id);
 
@@ -480,7 +473,8 @@ namespace Backend.Controllers
                 {
                     ProductID = updatedProduct.ProductID,
                     ProductName = updatedProduct.ProductName,
-                    Brand = updatedProduct.Brand,
+                    BrandID = updatedProduct.BrandID,
+                    Brand = updatedProduct.Brand.BrandName,
                     Description = updatedProduct.Description,
                     Price = updatedProduct.Price,
                     Stock = updatedProduct.Stock,
@@ -655,6 +649,7 @@ namespace Backend.Controllers
                 // Aynı kategoriden başka ürünleri bul (max 4) + rastgele seç
                 var relatedProducts = await _context.Products
                     .Include(p => p.Category)
+                    .Include(p => p.Brand)
                     .Where(p => 
                         p.CategoryID == product.CategoryID && 
                         p.ProductID != id && 
@@ -666,7 +661,8 @@ namespace Backend.Controllers
                     {
                         ProductID = p.ProductID,
                         ProductName = p.ProductName,
-                        Brand = p.Brand,
+                        BrandID = p.BrandID,
+                        Brand = p.Brand.BrandName,
                         Price = p.Price,
                         ImageUrl = p.ImageUrl,
                         CategoryName = p.Category.CategoryName,
@@ -926,6 +922,7 @@ namespace Backend.Controllers
                 // Fetch products with specifications
                 var products = await _context.Products
                     .Include(p => p.Category)
+                    .Include(p => p.Brand)
                     .Include(p => p.ProductSpecifications)
                     .Where(p => dto.ProductIds.Contains(p.ProductID) && p.IsActive)
                     .ToListAsync();
@@ -941,7 +938,7 @@ namespace Backend.Controllers
                 {
                     ProductID = p.ProductID,
                     ProductName = p.ProductName,
-                    Brand = p.Brand,
+                    Brand = p.Brand.BrandName,
                     Price = p.Price,
                     ImageUrl = p.ImageUrl,
                     Stock = p.Stock,
@@ -966,8 +963,8 @@ namespace Backend.Controllers
                 comparisonAttributes.Add(new ComparisonAttribute
                 {
                     AttributeName = "Brand",
-                    ProductValues = products.ToDictionary(p => p.ProductID, p => p.Brand),
-                    HasDifference = products.Select(p => p.Brand).Distinct().Count() > 1
+                    ProductValues = products.ToDictionary(p => p.ProductID, p => p.Brand.BrandName),
+                    HasDifference = products.Select(p => p.Brand.BrandName).Distinct().Count() > 1
                 });
 
                 comparisonAttributes.Add(new ComparisonAttribute
@@ -1054,6 +1051,7 @@ namespace Backend.Controllers
 
                 var similarProducts = await _context.Products
                     .Include(p => p.Category)
+                    .Include(p => p.Brand)
                     .Where(p => p.CategoryID == product.CategoryID 
                              && p.ProductID != id 
                              && p.IsActive)
@@ -1063,7 +1061,7 @@ namespace Backend.Controllers
                     {
                         ProductID = p.ProductID,
                         ProductName = p.ProductName,
-                        Brand = p.Brand,
+                        Brand = p.Brand.BrandName,
                         Price = p.Price,
                         ImageUrl = p.ImageUrl,
                         CategoryName = p.Category != null ? p.Category.CategoryName : "Uncategorized",
@@ -1098,12 +1096,13 @@ namespace Backend.Controllers
 
                 var products = await _context.Products
                     .Include(p => p.Category)
+                    .Include(p => p.Brand)
                     .Where(p => productIds.Contains(p.ProductID) && p.IsActive)
                     .Select(p => new ComparisonListItemDto
                     {
                         ProductID = p.ProductID,
                         ProductName = p.ProductName,
-                        Brand = p.Brand,
+                        Brand = p.Brand.BrandName,
                         Price = p.Price,
                         ImageUrl = p.ImageUrl,
                         CategoryName = p.Category != null ? p.Category.CategoryName : "Uncategorized",
@@ -1132,13 +1131,15 @@ namespace Backend.Controllers
             {
                 var lowStockProducts = await _context.Products
                     .Include(p => p.Category)
+                    .Include(p => p.Brand)
                     .Where(p => p.Stock <= p.CriticalStockLevel && p.IsActive)
                     .OrderBy(p => p.Stock)
                     .Select(p => new ProductListDto
                     {
                         ProductID = p.ProductID,
                         ProductName = p.ProductName,
-                        Brand = p.Brand,
+                        BrandID = p.BrandID,
+                        Brand = p.Brand.BrandName,
                         Price = p.Price,
                         Stock = p.Stock,
                         CriticalStockLevel = p.CriticalStockLevel,
@@ -1194,6 +1195,7 @@ namespace Backend.Controllers
                 var productDto = await _context.Products
                     .Where(p => p.ProductID == id)
                     .Include(p => p.Category)
+                    .Include(p => p.Brand)
                     .Include(p => p.ProductSpecifications)
                     .Include(p => p.ProductImages)
                     .Include(p => p.ProductReviews)
@@ -1201,7 +1203,8 @@ namespace Backend.Controllers
                     {
                         ProductID = p.ProductID,
                         ProductName = p.ProductName,
-                        Brand = p.Brand,
+                        BrandID = p.BrandID,
+                        Brand = p.Brand.BrandName,
                         Description = p.Description,
                         Price = p.Price,
                         Stock = p.Stock,

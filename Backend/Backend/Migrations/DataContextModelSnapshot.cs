@@ -22,6 +22,38 @@ namespace Backend.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Backend.Models.Brand", b =>
+                {
+                    b.Property<int>("BrandID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("BrandID"));
+
+                    b.Property<string>("BrandName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("BrandID");
+
+                    b.ToTable("Brands");
+                });
+
             modelBuilder.Entity("Backend.Models.CartItem", b =>
                 {
                     b.Property<int>("CartItemID")
@@ -69,6 +101,32 @@ namespace Backend.Migrations
                     b.HasIndex("ParentCategoryID");
 
                     b.ToTable("Categories");
+                });
+
+            modelBuilder.Entity("Backend.Models.Favorite", b =>
+                {
+                    b.Property<int>("FavoriteID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("FavoriteID"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ProductID")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UserID")
+                        .HasColumnType("integer");
+
+                    b.HasKey("FavoriteID");
+
+                    b.HasIndex("ProductID");
+
+                    b.HasIndex("UserID");
+
+                    b.ToTable("Favorites");
                 });
 
             modelBuilder.Entity("Backend.Models.Order", b =>
@@ -134,6 +192,62 @@ namespace Backend.Migrations
                     b.ToTable("OrderItems");
                 });
 
+            modelBuilder.Entity("Backend.Models.OrderReturn", b =>
+                {
+                    b.Property<int>("ReturnID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ReturnID"));
+
+                    b.Property<string>("AdminNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("OrderID")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("RefundAmount")
+                        .HasColumnType("numeric");
+
+                    b.Property<int?>("RefundTransactionID")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ReturnDescription")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ReturnReason")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserID")
+                        .HasColumnType("integer");
+
+                    b.HasKey("ReturnID");
+
+                    b.HasIndex("OrderID")
+                        .IsUnique();
+
+                    b.HasIndex("RefundTransactionID");
+
+                    b.HasIndex("UserID");
+
+                    b.ToTable("OrderReturns");
+                });
+
             modelBuilder.Entity("Backend.Models.Product", b =>
                 {
                     b.Property<int>("ProductID")
@@ -142,16 +256,17 @@ namespace Backend.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ProductID"));
 
-                    b.Property<string>("Brand")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                    b.Property<int>("BrandID")
+                        .HasColumnType("integer");
 
                     b.Property<int>("CategoryID")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("CriticalStockLevel")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -179,6 +294,8 @@ namespace Backend.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("ProductID");
+
+                    b.HasIndex("BrandID");
 
                     b.HasIndex("CategoryID");
 
@@ -302,6 +419,50 @@ namespace Backend.Migrations
                         .HasDatabaseName("RoleNameIndex");
 
                     b.ToTable("AspNetRoles", (string)null);
+                });
+
+            modelBuilder.Entity("Backend.Models.Transaction", b =>
+                {
+                    b.Property<int>("TransactionID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("TransactionID"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("OrderID")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("TransactionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TransactionType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("UserID")
+                        .HasColumnType("integer");
+
+                    b.HasKey("TransactionID");
+
+                    b.HasIndex("OrderID")
+                        .IsUnique();
+
+                    b.HasIndex("UserID");
+
+                    b.ToTable("Transactions");
                 });
 
             modelBuilder.Entity("Backend.Models.User", b =>
@@ -518,6 +679,25 @@ namespace Backend.Migrations
                     b.Navigation("ParentCategory");
                 });
 
+            modelBuilder.Entity("Backend.Models.Favorite", b =>
+                {
+                    b.HasOne("Backend.Models.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Backend.Models.Order", b =>
                 {
                     b.HasOne("Backend.Models.User", "User")
@@ -548,13 +728,46 @@ namespace Backend.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("Backend.Models.OrderReturn", b =>
+                {
+                    b.HasOne("Backend.Models.Order", "Order")
+                        .WithOne("OrderReturn")
+                        .HasForeignKey("Backend.Models.OrderReturn", "OrderID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.Transaction", "RefundTransaction")
+                        .WithMany()
+                        .HasForeignKey("RefundTransactionID");
+
+                    b.HasOne("Backend.Models.User", "User")
+                        .WithMany("OrderReturns")
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+
+                    b.Navigation("RefundTransaction");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Backend.Models.Product", b =>
                 {
+                    b.HasOne("Backend.Models.Brand", "Brand")
+                        .WithMany("Products")
+                        .HasForeignKey("BrandID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("Backend.Models.Category", "Category")
                         .WithMany("Products")
                         .HasForeignKey("CategoryID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Brand");
 
                     b.Navigation("Category");
                 });
@@ -598,6 +811,25 @@ namespace Backend.Migrations
                         .IsRequired();
 
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Backend.Models.Transaction", b =>
+                {
+                    b.HasOne("Backend.Models.Order", "Order")
+                        .WithOne("Transaction")
+                        .HasForeignKey("Backend.Models.Transaction", "OrderID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.User", "User")
+                        .WithMany("Transactions")
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>
@@ -651,6 +883,11 @@ namespace Backend.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Backend.Models.Brand", b =>
+                {
+                    b.Navigation("Products");
+                });
+
             modelBuilder.Entity("Backend.Models.Category", b =>
                 {
                     b.Navigation("Products");
@@ -661,6 +898,10 @@ namespace Backend.Migrations
             modelBuilder.Entity("Backend.Models.Order", b =>
                 {
                     b.Navigation("OrderItems");
+
+                    b.Navigation("OrderReturn");
+
+                    b.Navigation("Transaction");
                 });
 
             modelBuilder.Entity("Backend.Models.Product", b =>
@@ -678,9 +919,13 @@ namespace Backend.Migrations
                 {
                     b.Navigation("CartItems");
 
+                    b.Navigation("OrderReturns");
+
                     b.Navigation("Orders");
 
                     b.Navigation("ProductReviews");
+
+                    b.Navigation("Transactions");
                 });
 #pragma warning restore 612, 618
         }
