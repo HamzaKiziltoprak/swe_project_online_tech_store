@@ -1120,5 +1120,125 @@ namespace Backend.Controllers
                     "An error occurred while fetching comparison details"));
             }
         }
+
+        /// <summary>
+        /// Get products with low stock (Admin only)
+        /// </summary>
+        [HttpGet("low-stock")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<ApiResponse<List<ProductListDto>>>> GetLowStockProducts()
+        {
+            try
+            {
+                var lowStockProducts = await _context.Products
+                    .Include(p => p.Category)
+                    .Where(p => p.Stock <= p.CriticalStockLevel && p.IsActive)
+                    .OrderBy(p => p.Stock)
+                    .Select(p => new ProductListDto
+                    {
+                        ProductID = p.ProductID,
+                        ProductName = p.ProductName,
+                        Brand = p.Brand,
+                        Price = p.Price,
+                        Stock = p.Stock,
+                        CriticalStockLevel = p.CriticalStockLevel,
+                        ImageUrl = p.ImageUrl,
+                        CategoryName = p.Category != null ? p.Category.CategoryName : "Uncategorized",
+                        IsActive = p.IsActive,
+                        AverageRating = p.ProductReviews.Any() ? p.ProductReviews.Average(r => r.Rating) : 0
+                    })
+                    .ToListAsync();
+
+                _logger.LogInformation($"Low stock products fetched: Count={lowStockProducts.Count}");
+
+                return Ok(ApiResponse<List<ProductListDto>>.SuccessResponse(
+                    lowStockProducts,
+                    $"{lowStockProducts.Count} ürün kritik stok seviyesinde veya altında"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching low stock products");
+                return StatusCode(500, ApiResponse<List<ProductListDto>>.FailureResponse(
+                    "Low stock products could not be fetched"));
+            }
+        }
+
+        /// <summary>
+        /// Update critical stock level for a product (Admin only)
+        /// </summary>
+        [HttpPut("{id}/critical-level")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<ApiResponse<ProductDetailDto>>> UpdateCriticalStockLevel(
+            [FromRoute] int id,
+            [FromBody] int criticalLevel)
+        {
+            try
+            {
+                if (criticalLevel < 0)
+                {
+                    return BadRequest(ApiResponse<ProductDetailDto>.FailureResponse(
+                        "Critical stock level cannot be negative"));
+                }
+
+                var product = await _context.Products.FindAsync(id);
+                if (product == null)
+                {
+                    return NotFound(ApiResponse<ProductDetailDto>.FailureResponse("Product not found"));
+                }
+
+                product.CriticalStockLevel = criticalLevel;
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Critical stock level updated: ProductID={id}, NewLevel={criticalLevel}");
+
+                var productDto = await _context.Products
+                    .Where(p => p.ProductID == id)
+                    .Include(p => p.Category)
+                    .Include(p => p.ProductSpecifications)
+                    .Include(p => p.ProductImages)
+                    .Include(p => p.ProductReviews)
+                    .Select(p => new ProductDetailDto
+                    {
+                        ProductID = p.ProductID,
+                        ProductName = p.ProductName,
+                        Brand = p.Brand,
+                        Description = p.Description,
+                        Price = p.Price,
+                        Stock = p.Stock,
+                        CriticalStockLevel = p.CriticalStockLevel,
+                        ImageUrl = p.ImageUrl,
+                        IsActive = p.IsActive,
+                        CategoryID = p.CategoryID,
+                        CategoryName = p.Category != null ? p.Category.CategoryName : "Uncategorized",
+                        CreatedAt = p.CreatedAt,
+                        AverageRating = p.ProductReviews.Any() ? p.ProductReviews.Average(r => r.Rating) : 0,
+                        ReviewCount = p.ProductReviews.Count,
+                        Specifications = p.ProductSpecifications.Select(ps => new ProductSpecificationDto
+                        {
+                            SpecID = ps.SpecID,
+                            ProductID = ps.ProductID,
+                            SpecName = ps.SpecName,
+                            SpecValue = ps.SpecValue
+                        }).ToList(),
+                        Images = p.ProductImages.Select(pi => new ProductImageDto
+                        {
+                            ImageID = pi.ImageID,
+                            ImageUrl = pi.ImageUrl,
+                            IsMainImage = pi.IsMainImage
+                        }).ToList()
+                    })
+                    .FirstOrDefaultAsync();
+
+                return Ok(ApiResponse<ProductDetailDto>.SuccessResponse(
+                    productDto!,
+                    "Critical stock level updated successfully"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating critical stock level");
+                return StatusCode(500, ApiResponse<ProductDetailDto>.FailureResponse(
+                    "An error occurred while updating critical stock level"));
+            }
+        }
     }
 }

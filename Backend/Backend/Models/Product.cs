@@ -26,6 +26,8 @@ namespace Backend.Models
 
         public int Stock { get; set; } = 0;
 
+        public int CriticalStockLevel { get; set; } = 10; // Default critical level
+
         public string ImageUrl { get; set; } = null!;
 
         public bool IsActive { get; set; } = true;

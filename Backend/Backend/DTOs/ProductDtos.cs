@@ -12,7 +12,9 @@ namespace Backend.DTOs
         public string ImageUrl { get; set; } = null!;
         public string CategoryName { get; set; } = null!;
         public int Stock { get; set; }
+        public int? CriticalStockLevel { get; set; }
         public bool IsActive { get; set; }
+        public double? AverageRating { get; set; }
     }
 
     // Ürün Detay Sayfası İçin (Tam Bilgi)
@@ -24,6 +26,7 @@ namespace Backend.DTOs
         public string Description { get; set; } = null!;
         public decimal Price { get; set; }
         public int Stock { get; set; }
+        public int CriticalStockLevel { get; set; }
         public string ImageUrl { get; set; } = null!;
         public string CategoryName { get; set; } = null!;
         public int CategoryID { get; set; }
@@ -33,6 +36,8 @@ namespace Backend.DTOs
         // Review bilgileri (varsa)
         public double AverageRating { get; set; }
         public int ReviewCount { get; set; }
+        public List<ProductSpecificationDto>? Specifications { get; set; }
+        public List<ProductImageDto>? Images { get; set; }
     }
 
     // Yeni Ürün Ekleme İçin (Admin)
@@ -142,6 +147,14 @@ namespace Backend.DTOs
 
         [Range(1, 100, ErrorMessage = "Page size must be between 1 and 100")]
         public int PageSize { get; set; } = 12;
+    }
+
+    // Product Image DTO
+    public class ProductImageDto
+    {
+        public int ImageID { get; set; }
+        public string ImageUrl { get; set; } = null!;
+        public bool IsMainImage { get; set; }
     }
 
     // Sayfalama Sonucu İçin
