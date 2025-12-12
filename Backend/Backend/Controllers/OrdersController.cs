@@ -32,9 +32,10 @@ namespace Backend.Controllers
         }
 
         /// <summary>
-        /// Sepetten sipariş oluştur
+        /// Sepetten sipariş oluştur (Sadece Customer)
         /// </summary>
         [HttpPost]
+        [Authorize(Roles = "Customer")]
         public async Task<ActionResult<ApiResponse<OrderDto>>> CreateOrder([FromBody] CreateOrderDto createOrderDto)
         {
             try
@@ -884,9 +885,10 @@ namespace Backend.Controllers
         }
 
         /// <summary>
-        /// One-Click Buy - Hızlı satın alma (sepetteki tüm ürünleri tek tıkla satın al)
+        /// One-Click Buy - Hızlı satın alma (sepetteki tüm ürünleri tek tıkla satın al) (Sadece Customer)
         /// </summary>
         [HttpPost("one-click-buy")]
+        [Authorize(Roles = "Customer")]
         public async Task<ActionResult<OneClickBuyResponse>> OneClickBuy([FromBody] OneClickBuyDto dto)
         {
             try

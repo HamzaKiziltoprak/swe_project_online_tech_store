@@ -8,7 +8,7 @@ namespace Backend.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin,CompanyOwner")]
+    [Authorize(Roles = "Admin,ProductManager,CompanyOwner")]
     public class AnalyticsController : ControllerBase
     {
         private readonly DataContext _context;

@@ -49,7 +49,7 @@ namespace Backend.Controllers
                 }
 
                 // Geçerli roller
-                var validRoles = new[] { "Admin", "Employee", "ProductManager", "Customer" };
+                var validRoles = new[] { "Admin", "ProductManager", "Customer", "CompanyOwner" };
                 if (!validRoles.Contains(assignRoleDto.Role))
                 {
                     return BadRequest(ApiResponse<AssignRoleResponseDto>.FailureResponse(

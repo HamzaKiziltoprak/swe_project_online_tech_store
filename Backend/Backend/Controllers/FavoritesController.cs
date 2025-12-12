@@ -10,7 +10,7 @@ namespace Backend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    [Authorize(Roles = "Customer")]
     public class FavoritesController : ControllerBase
     {
         private readonly DataContext _context;

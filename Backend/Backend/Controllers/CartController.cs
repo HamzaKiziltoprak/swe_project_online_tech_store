@@ -11,7 +11,7 @@ namespace Backend.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [Authorize(Roles = "Customer")]
     public class CartController : ControllerBase
     {
         private readonly DataContext _context;

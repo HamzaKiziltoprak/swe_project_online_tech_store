@@ -159,10 +159,10 @@ namespace Backend.Controllers
         }
 
         /// <summary>
-        /// Create a new review for a product
+        /// Create a new review for a product (Sadece Customer)
         /// </summary>
         [HttpPost]
-        [Authorize]
+        [Authorize(Roles = "Customer")]
         public async Task<ActionResult<ApiResponse<ReviewDto>>> CreateReview(
             int productId,
             [FromBody] CreateReviewDto request)
@@ -232,10 +232,10 @@ namespace Backend.Controllers
         }
 
         /// <summary>
-        /// Update user's review
+        /// Update user's review (Sadece Customer)
         /// </summary>
         [HttpPut("{reviewId}")]
-        [Authorize]
+        [Authorize(Roles = "Customer")]
         public async Task<ActionResult<ApiResponse<ReviewDto>>> UpdateReview(
             int productId,
             int reviewId,
@@ -290,16 +290,15 @@ namespace Backend.Controllers
         }
 
         /// <summary>
-        /// Delete review (user or admin only)
+        /// Delete review (Sadece Customer kendi yorumunu silebilir)
         /// </summary>
         [HttpDelete("{reviewId}")]
-        [Authorize]
+        [Authorize(Roles = "Customer")]
         public async Task<ActionResult<ApiResponse<object>>> DeleteReview(int productId, int reviewId)
         {
             try
             {
                 var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
-                var isAdmin = User.IsInRole("Admin");
 
                 var review = await _context.ProductReviews
                     .FirstOrDefaultAsync(r => r.ReviewID == reviewId && r.ProductID == productId);
@@ -307,7 +306,7 @@ namespace Backend.Controllers
                 if (review == null)
                     return NotFound(ApiResponse<object>.FailureResponse("Review not found", null));
 
-                if (review.UserID != userId && !isAdmin)
+                if (review.UserID != userId)
                     return Forbid();
 
                 _context.ProductReviews.Remove(review);
@@ -324,10 +323,10 @@ namespace Backend.Controllers
         }
 
         /// <summary>
-        /// Get user's reviews
+        /// Get user's reviews (Sadece Customer)
         /// </summary>
         [HttpGet("~/api/reviews/my-reviews")]
-        [Authorize]
+        [Authorize(Roles = "Customer")]
         public async Task<ActionResult<ApiResponse<PagedReviewResult>>> GetMyReviews([FromQuery] ReviewFilterParams filterParams)
         {
             try
@@ -392,10 +391,10 @@ namespace Backend.Controllers
         }
 
         /// <summary>
-        /// İnsan kaynakları/Çalışan tarafından review onayı
+        /// Product Manager tarafından review onayı
         /// </summary>
         [HttpPut("{reviewId}/approve")]
-        [Authorize(Roles = "Employee")]
+        [Authorize(Roles = "Admin,ProductManager")]
         public async Task<ActionResult<ApiResponse<ReviewDto>>> ApproveReview(
             [FromRoute] int productId,
             [FromRoute] int reviewId)
@@ -449,7 +448,7 @@ namespace Backend.Controllers
         /// Reject a review (Admin/Moderator only) - Removes the review
         /// </summary>
         [HttpPost("{reviewId}/reject")]
-        [Authorize(Roles = "Admin,Moderator")]
+        [Authorize(Roles = "Admin,ProductManager")]
         public async Task<ActionResult<ApiResponse<string>>> RejectReview(
             [FromRoute] int productId,
             [FromRoute] int reviewId)
@@ -480,10 +479,10 @@ namespace Backend.Controllers
         }
 
         /// <summary>
-        /// Get all pending reviews (Admin/Moderator only)
+        /// Get all pending reviews (Admin/ProductManager only)
         /// </summary>
         [HttpGet("/api/reviews/pending")]
-        [Authorize(Roles = "Admin,Moderator")]
+        [Authorize(Roles = "Admin,ProductManager")]
         public async Task<ActionResult<ApiResponse<List<ReviewDto>>>> GetPendingReviews()
         {
             try

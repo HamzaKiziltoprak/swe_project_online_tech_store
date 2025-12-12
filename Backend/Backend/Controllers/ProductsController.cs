@@ -298,7 +298,7 @@ namespace Backend.Controllers
         // POST: api/products
         // Yeni ürün ekle (Sadece Admin)
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,ProductManager")]
         public async Task<ActionResult<ApiResponse<ProductDetailDto>>> CreateProduct([FromBody] CreateProductDto productDto)
         {
             if (!ModelState.IsValid)
@@ -398,7 +398,7 @@ namespace Backend.Controllers
         // PUT: api/products/{id}
         // Ürün güncelle (Sadece Admin)
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,ProductManager")]
         public async Task<ActionResult<ApiResponse<ProductDetailDto>>> UpdateProduct(int id, [FromBody] UpdateProductDto productDto)
         {
             if (!ModelState.IsValid)
@@ -1124,7 +1124,7 @@ namespace Backend.Controllers
         /// Get products with low stock (Admin only)
         /// </summary>
         [HttpGet("low-stock")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,ProductManager")]
         public async Task<ActionResult<ApiResponse<List<ProductListDto>>>> GetLowStockProducts()
         {
             try
@@ -1168,7 +1168,7 @@ namespace Backend.Controllers
         /// Update critical stock level for a product (Admin only)
         /// </summary>
         [HttpPut("{id}/critical-level")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,ProductManager")]
         public async Task<ActionResult<ApiResponse<ProductDetailDto>>> UpdateCriticalStockLevel(
             [FromRoute] int id,
             [FromBody] int criticalLevel)

@@ -19,7 +19,7 @@ namespace Backend.Data
             logger.LogInformation("--- Seeding Database Started ---");
 
             // Seed Roles
-            string[] roleNames = { "Admin", "Customer" };
+            string[] roleNames = { "Admin", "Customer", "ProductManager", "CompanyOwner" };
             foreach (var roleName in roleNames)
             {
                 if (!await roleManager.RoleExistsAsync(roleName))

@@ -29,9 +29,10 @@ namespace Backend.Controllers
         }
 
         /// <summary>
-        /// Create a return request for an order
+        /// Create a return request for an order (Sadece Customer)
         /// </summary>
         [HttpPost]
+        [Authorize(Roles = "Customer")]
         public async Task<ActionResult<ApiResponse<ReturnDto>>> CreateReturn(
             int orderId,
             [FromBody] CreateReturnDto dto)
@@ -121,15 +122,15 @@ namespace Backend.Controllers
         }
 
         /// <summary>
-        /// Get return request for an order
+        /// Get return request for an order (Sadece Customer kendi iade talebini görebilir)
         /// </summary>
         [HttpGet("{id}")]
+        [Authorize(Roles = "Customer")]
         public async Task<ActionResult<ApiResponse<ReturnDto>>> GetReturn(int orderId, int id)
         {
             try
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                var isAdmin = User.IsInRole("Admin") || User.IsInRole("ProductManager");
 
                 var orderReturn = await _context.OrderReturns
                     .FirstOrDefaultAsync(r => r.ReturnID == id && r.OrderID == orderId);
@@ -139,8 +140,8 @@ namespace Backend.Controllers
                     return NotFound(ApiResponse<ReturnDto>.FailureResponse("Return request not found"));
                 }
 
-                // Check authorization
-                if (!isAdmin && orderReturn.UserID.ToString() != userId)
+                // Check authorization - Customer sadece kendi iade talebini görebilir
+                if (orderReturn.UserID.ToString() != userId)
                 {
                     return Forbid();
                 }
