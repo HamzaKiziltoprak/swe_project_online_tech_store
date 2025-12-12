@@ -66,5 +66,14 @@ namespace Backend.Models
         /// </summary>
         [StringLength(500)]
         public string? AdminNote { get; set; }
+
+        /// <summary>
+        /// Refund transaction ID (when status becomes "Completed")
+        /// </summary>
+        public int? RefundTransactionID { get; set; }
+
+        [ForeignKey("RefundTransactionID")]
+        [ValidateNever]
+        public virtual Transaction? RefundTransaction { get; set; }
     }
 }

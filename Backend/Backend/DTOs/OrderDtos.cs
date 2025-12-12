@@ -71,4 +71,36 @@ namespace Backend.DTOs
         public string? SortBy { get; set; } = "OrderDate"; // OrderDate, TotalAmount
         public bool SortDescending { get; set; } = true;
     }
+
+    // One-Click Buy için DTO (Hızlı satın alma)
+    public class OneClickBuyDto
+    {
+        [Required(ErrorMessage = "Teslimat adresi gereklidir")]
+        [MinLength(10, ErrorMessage = "Adres en az 10 karakter olmalıdır")]
+        [MaxLength(500, ErrorMessage = "Adres en fazla 500 karakter olabilir")]
+        public string ShippingAddress { get; set; } = null!;
+
+        [StringLength(50)]
+        public string? PaymentMethod { get; set; } = "Default"; // Default, CreditCard, DebitCard
+    }
+
+    // One-Click Buy Response
+    public class OneClickBuyResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = null!;
+        public OrderDto? Order { get; set; }
+        public string? PaymentStatus { get; set; }
+        public string? TransactionId { get; set; }
+        public List<string>? Errors { get; set; }
+    }
+
+    // Payment Service Response (Mock)
+    public class PaymentResponse
+    {
+        public bool Success { get; set; }
+        public string TransactionId { get; set; } = null!;
+        public string Message { get; set; } = null!;
+        public string Status { get; set; } = null!; // Authorized, Failed, InsufficientFunds
+    }
 }

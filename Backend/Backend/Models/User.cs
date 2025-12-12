@@ -26,5 +26,11 @@ namespace Backend.Models
 
         [ValidateNever]
         public ICollection<ProductReview> ProductReviews { get; set; } = new List<ProductReview>();
+
+        [ValidateNever]
+        public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
+
+        [ValidateNever]
+        public ICollection<OrderReturn> OrderReturns { get; set; } = new List<OrderReturn>();
     }
 }

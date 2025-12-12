@@ -31,5 +31,11 @@ namespace Backend.Models
 
         [ValidateNever]
         public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+
+        [ValidateNever]
+        public virtual Transaction? Transaction { get; set; }
+
+        [ValidateNever]
+        public virtual OrderReturn? OrderReturn { get; set; }
     }
 }

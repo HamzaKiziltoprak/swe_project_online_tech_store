@@ -56,6 +56,9 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddDbContext<DataContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Register Services
+builder.Services.AddScoped<Backend.Services.IPaymentService, Backend.Services.MockPaymentService>();
+
 // Add CORS for frontend
 builder.Services.AddCors(options =>
 {

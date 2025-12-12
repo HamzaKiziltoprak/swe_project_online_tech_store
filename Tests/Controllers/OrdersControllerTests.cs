@@ -28,6 +28,9 @@ namespace Tests.Controllers
         // Controller loglaması için mock Logger
         private readonly Mock<ILogger<OrdersController>> _mockLogger;
 
+        // Payment service mock
+        private readonly Mock<Backend.Services.IPaymentService> _mockPaymentService;
+
         // Test edilen controller
         private readonly OrdersController _controller;
 
@@ -50,11 +53,15 @@ namespace Tests.Controllers
             // Logger mock
             _mockLogger = new Mock<ILogger<OrdersController>>();
 
+            // Payment service mock
+            _mockPaymentService = new Mock<Backend.Services.IPaymentService>();
+
             // Controller örneğini oluşturuyoruz
             _controller = new OrdersController(
                 _context,
                 _mockUserManager.Object,
-                _mockLogger.Object
+                _mockLogger.Object,
+                _mockPaymentService.Object
             );
         }
 
@@ -287,6 +294,252 @@ namespace Tests.Controllers
             {
                 HttpContext = new DefaultHttpContext { User = claimsPrincipal }
             };
+        }
+
+        // One-Click Buy Tests
+
+        [Fact]
+        public async Task OneClickBuy_ShouldReturnSuccess_WhenPaymentSucceeds()
+        {
+            // Arrange
+            var userId = 1;
+            var user = new User { Id = userId, Email = "test@user.com", FirstName = "Test", LastName = "User" };
+            SetupHttpContextWithUser(userId);
+            _mockUserManager.Setup(x => x.FindByIdAsync(userId.ToString())).ReturnsAsync(user);
+
+            // Add product and cart items
+            var product = new Product
+            {
+                ProductID = 1,
+                ProductName = "Gaming Laptop",
+                Price = 1500m,
+                Stock = 10,
+                Brand = "Dell",
+                Description = "High-end laptop",
+                ImageUrl = "laptop.jpg",
+                IsActive = true
+            };
+            _context.Products.Add(product);
+
+            var cartItem = new CartItem
+            {
+                CartItemID = 1,
+                UserID = userId,
+                ProductID = 1,
+                Count = 2
+            };
+            _context.CartItems.Add(cartItem);
+            await _context.SaveChangesAsync();
+            _context.ChangeTracker.Clear();
+
+            // Mock successful payment
+            _mockPaymentService.Setup(x => x.ProcessPaymentAsync(It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<int>()))
+                .ReturnsAsync(new PaymentResponse
+                {
+                    Success = true,
+                    TransactionId = "TXN-123456",
+                    Message = "Payment authorized successfully",
+                    Status = "Authorized"
+                });
+
+            var dto = new OneClickBuyDto
+            {
+                ShippingAddress = "123 Main Street, City, Country",
+                PaymentMethod = "CreditCard"
+            };
+
+            // Act
+            var result = await _controller.OneClickBuy(dto);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            var response = Assert.IsType<OneClickBuyResponse>(okResult.Value);
+
+            Assert.True(response.Success);
+            Assert.NotNull(response.Order);
+            Assert.Equal(3000m, response.Order!.TotalAmount); // 1500 * 2
+            Assert.Equal("Processing", response.Order.Status);
+            Assert.Equal("Authorized", response.PaymentStatus);
+
+            // Verify stock was reduced
+            var updatedProduct = await _context.Products.FindAsync(1);
+            Assert.Equal(8, updatedProduct!.Stock);
+
+            // Verify cart was cleared
+            var cartCount = await _context.CartItems.CountAsync(ci => ci.UserID == userId);
+            Assert.Equal(0, cartCount);
+
+            // Verify transaction was created
+            var transaction = await _context.Transactions.FirstOrDefaultAsync();
+            Assert.NotNull(transaction);
+            Assert.Equal("Purchase", transaction!.TransactionType);
+            Assert.Equal(3000m, transaction.Amount);
+        }
+
+        [Fact]
+        public async Task OneClickBuy_ShouldReturnError_WhenPaymentFails()
+        {
+            // Arrange
+            var userId = 1;
+            var user = new User { Id = userId, Email = "test@user.com", FirstName = "Test", LastName = "User" };
+            SetupHttpContextWithUser(userId);
+            _mockUserManager.Setup(x => x.FindByIdAsync(userId.ToString())).ReturnsAsync(user);
+
+            var product = new Product
+            {
+                ProductID = 1,
+                ProductName = "Laptop",
+                Price = 1000m,
+                Stock = 5,
+                Brand = "HP",
+                Description = "Standard laptop",
+                ImageUrl = "laptop.jpg",
+                IsActive = true
+            };
+            _context.Products.Add(product);
+
+            var cartItem = new CartItem { CartItemID = 1, UserID = userId, ProductID = 1, Count = 1 };
+            _context.CartItems.Add(cartItem);
+            await _context.SaveChangesAsync();
+            _context.ChangeTracker.Clear();
+
+            // Mock failed payment
+            _mockPaymentService.Setup(x => x.ProcessPaymentAsync(It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<int>()))
+                .ReturnsAsync(new PaymentResponse
+                {
+                    Success = false,
+                    TransactionId = "TXN-FAIL-123",
+                    Message = "Insufficient funds",
+                    Status = "InsufficientFunds"
+                });
+
+            var dto = new OneClickBuyDto
+            {
+                ShippingAddress = "123 Main Street",
+                PaymentMethod = "CreditCard"
+            };
+
+            // Act
+            var result = await _controller.OneClickBuy(dto);
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+            var response = Assert.IsType<OneClickBuyResponse>(badRequestResult.Value);
+
+            Assert.False(response.Success);
+            Assert.Equal("Insufficient funds", response.Message);
+            Assert.Equal("InsufficientFunds", response.PaymentStatus);
+
+            // Verify stock was NOT reduced
+            var product_check = await _context.Products.FindAsync(1);
+            Assert.Equal(5, product_check!.Stock);
+
+            // Verify cart was NOT cleared
+            var cartCount = await _context.CartItems.CountAsync(ci => ci.UserID == userId);
+            Assert.Equal(1, cartCount);
+
+            // Verify no order was created
+            var orderCount = await _context.Orders.CountAsync();
+            Assert.Equal(0, orderCount);
+        }
+
+        [Fact]
+        public async Task OneClickBuy_ShouldReturnError_WhenCartIsEmpty()
+        {
+            // Arrange
+            var userId = 1;
+            SetupHttpContextWithUser(userId);
+
+            var dto = new OneClickBuyDto { ShippingAddress = "123 Main Street" };
+
+            // Act
+            var result = await _controller.OneClickBuy(dto);
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+            var response = Assert.IsType<OneClickBuyResponse>(badRequestResult.Value);
+
+            Assert.False(response.Success);
+            Assert.Equal("Cart is empty", response.Message);
+        }
+
+        [Fact]
+        public async Task OneClickBuy_ShouldReturnError_WhenInsufficientStock()
+        {
+            // Arrange
+            var userId = 1;
+            SetupHttpContextWithUser(userId);
+
+            var product = new Product
+            {
+                ProductID = 1,
+                ProductName = "Limited Stock Item",
+                Price = 500m,
+                Stock = 2,
+                Brand = "Test",
+                Description = "Low stock",
+                ImageUrl = "item.jpg",
+                IsActive = true
+            };
+            _context.Products.Add(product);
+
+            var cartItem = new CartItem { CartItemID = 1, UserID = userId, ProductID = 1, Count = 5 }; // Request more than available
+            _context.CartItems.Add(cartItem);
+            await _context.SaveChangesAsync();
+            _context.ChangeTracker.Clear();
+
+            var dto = new OneClickBuyDto { ShippingAddress = "123 Main Street" };
+
+            // Act
+            var result = await _controller.OneClickBuy(dto);
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+            var response = Assert.IsType<OneClickBuyResponse>(badRequestResult.Value);
+
+            Assert.False(response.Success);
+            Assert.Equal("Stock validation failed", response.Message);
+            Assert.NotNull(response.Errors);
+            Assert.Contains("insufficient stock", response.Errors![0]);
+        }
+
+        [Fact]
+        public async Task OneClickBuy_ShouldReturnError_WhenProductInactive()
+        {
+            // Arrange
+            var userId = 1;
+            SetupHttpContextWithUser(userId);
+
+            var product = new Product
+            {
+                ProductID = 1,
+                ProductName = "Inactive Product",
+                Price = 100m,
+                Stock = 10,
+                Brand = "Test",
+                Description = "Not available",
+                ImageUrl = "item.jpg",
+                IsActive = false // Product is inactive
+            };
+            _context.Products.Add(product);
+
+            var cartItem = new CartItem { CartItemID = 1, UserID = userId, ProductID = 1, Count = 1 };
+            _context.CartItems.Add(cartItem);
+            await _context.SaveChangesAsync();
+            _context.ChangeTracker.Clear();
+
+            var dto = new OneClickBuyDto { ShippingAddress = "123 Main Street" };
+
+            // Act
+            var result = await _controller.OneClickBuy(dto);
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+            var response = Assert.IsType<OneClickBuyResponse>(badRequestResult.Value);
+
+            Assert.False(response.Success);
+            Assert.Equal("Stock validation failed", response.Message);
+            Assert.Contains("is no longer available", response.Errors![0]);
         }
     }
 }

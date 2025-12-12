@@ -17,15 +17,18 @@ namespace Backend.Controllers
         private readonly DataContext _context;
         private readonly UserManager<User> _userManager;
         private readonly ILogger<OrdersController> _logger;
+        private readonly Services.IPaymentService _paymentService;
 
         public OrdersController(
             DataContext context,
             UserManager<User> userManager,
-            ILogger<OrdersController> logger)
+            ILogger<OrdersController> logger,
+            Services.IPaymentService paymentService)
         {
             _context = context;
             _userManager = userManager;
             _logger = logger;
+            _paymentService = paymentService;
         }
 
         /// <summary>
@@ -112,6 +115,20 @@ namespace Backend.Controllers
                 // Sepeti boşalt
                 _context.CartItems.RemoveRange(cartItems);
 
+                await _context.SaveChangesAsync();
+
+                // Transaction kaydı oluştur
+                var transaction = new Transaction
+                {
+                    TransactionType = "Purchase",
+                    Amount = totalAmount,
+                    TransactionDate = DateTime.UtcNow,
+                    Description = $"Order #{order.OrderID} - {cartItems.Count} items",
+                    Status = "Completed",
+                    OrderID = order.OrderID,
+                    UserID = int.Parse(userId)
+                };
+                _context.Transactions.Add(transaction);
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation($"Sipariş oluşturuldu: OrderID={order.OrderID}, UserID={userId}, Total={totalAmount}");
@@ -864,6 +881,187 @@ namespace Backend.Controllers
                 UpdatedAt = orderReturn.UpdatedAt,
                 AdminNote = orderReturn.AdminNote
             };
+        }
+
+        /// <summary>
+        /// One-Click Buy - Hızlı satın alma (sepetteki tüm ürünleri tek tıkla satın al)
+        /// </summary>
+        [HttpPost("one-click-buy")]
+        public async Task<ActionResult<OneClickBuyResponse>> OneClickBuy([FromBody] OneClickBuyDto dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new OneClickBuyResponse
+                    {
+                        Success = false,
+                        Message = "Validation failed",
+                        Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList()
+                    });
+                }
+
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new OneClickBuyResponse
+                    {
+                        Success = false,
+                        Message = "User not authenticated"
+                    });
+                }
+
+                var userIdInt = int.Parse(userId);
+
+                // 1. Sepetteki ürünleri getir
+                var cartItems = await _context.CartItems
+                    .Include(ci => ci.Product)
+                    .Where(ci => ci.UserID == userIdInt)
+                    .ToListAsync();
+
+                if (!cartItems.Any())
+                {
+                    return BadRequest(new OneClickBuyResponse
+                    {
+                        Success = false,
+                        Message = "Cart is empty"
+                    });
+                }
+
+                // 2. Stok kontrolü
+                var stockErrors = new List<string>();
+                foreach (var item in cartItems)
+                {
+                    if (!item.Product.IsActive)
+                    {
+                        stockErrors.Add($"{item.Product.ProductName} is no longer available");
+                    }
+                    else if (item.Product.Stock < item.Count)
+                    {
+                        stockErrors.Add($"{item.Product.ProductName} - insufficient stock (Available: {item.Product.Stock}, Requested: {item.Count})");
+                    }
+                }
+
+                if (stockErrors.Any())
+                {
+                    return BadRequest(new OneClickBuyResponse
+                    {
+                        Success = false,
+                        Message = "Stock validation failed",
+                        Errors = stockErrors
+                    });
+                }
+
+                // 3. Toplam tutarı hesapla
+                decimal totalAmount = cartItems.Sum(ci => ci.Product.Price * ci.Count);
+
+                // 4. Payment Service ile ödemeyi işle (Mock)
+                var paymentResponse = await _paymentService.ProcessPaymentAsync(
+                    totalAmount,
+                    dto.PaymentMethod ?? "Default",
+                    userIdInt
+                );
+
+                // 5. Ödeme başarısız ise
+                if (!paymentResponse.Success)
+                {
+                    _logger.LogWarning($"One-Click Buy payment failed for user {userId}: {paymentResponse.Message}");
+                    
+                    return BadRequest(new OneClickBuyResponse
+                    {
+                        Success = false,
+                        Message = paymentResponse.Message,
+                        PaymentStatus = paymentResponse.Status,
+                        TransactionId = paymentResponse.TransactionId
+                    });
+                }
+
+                // 6. Ödeme başarılı - Siparişi oluştur
+                var order = new Order
+                {
+                    UserID = userIdInt,
+                    TotalAmount = totalAmount,
+                    Status = "Processing", // One-Click Buy direkt Processing'e geçer
+                    ShippingAddress = dto.ShippingAddress,
+                    OrderDate = DateTime.UtcNow,
+                    OrderItems = cartItems.Select(ci => new OrderItem
+                    {
+                        ProductID = ci.ProductID,
+                        Quantity = ci.Count,
+                        UnitPrice = ci.Product.Price
+                    }).ToList()
+                };
+
+                _context.Orders.Add(order);
+
+                // 7. Stokları güncelle (rezervasyon)
+                foreach (var item in cartItems)
+                {
+                    item.Product.Stock -= item.Count;
+                    _logger.LogInformation($"Stock reserved: {item.Product.ProductName}, Quantity: {item.Count}, Remaining: {item.Product.Stock}");
+                }
+
+                // 8. Sepeti temizle
+                _context.CartItems.RemoveRange(cartItems);
+
+                await _context.SaveChangesAsync();
+
+                // 9. Transaction kaydı oluştur
+                var transaction = new Transaction
+                {
+                    TransactionType = "Purchase",
+                    Amount = totalAmount,
+                    TransactionDate = DateTime.UtcNow,
+                    Description = $"One-Click Buy - Order #{order.OrderID} - {cartItems.Count} items - Payment: {paymentResponse.TransactionId}",
+                    Status = "Completed",
+                    OrderID = order.OrderID,
+                    UserID = userIdInt
+                };
+                _context.Transactions.Add(transaction);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"One-Click Buy successful: OrderID={order.OrderID}, UserID={userId}, Amount={totalAmount}, PaymentTxn={paymentResponse.TransactionId}");
+
+                // 10. Yanıt oluştur
+                var user = await _userManager.FindByIdAsync(userId);
+                var orderDto = new OrderDto
+                {
+                    OrderID = order.OrderID,
+                    UserID = order.UserID,
+                    UserEmail = user?.Email ?? "",
+                    TotalAmount = order.TotalAmount,
+                    Status = order.Status,
+                    OrderDate = order.OrderDate,
+                    ShippingAddress = order.ShippingAddress,
+                    Items = order.OrderItems.Select(oi => new OrderItemDto
+                    {
+                        OrderItemID = oi.OrderItemID,
+                        ProductID = oi.ProductID,
+                        ProductName = cartItems.First(ci => ci.ProductID == oi.ProductID).Product.ProductName,
+                        UnitPrice = oi.UnitPrice,
+                        Quantity = oi.Quantity,
+                        Subtotal = oi.UnitPrice * oi.Quantity
+                    }).ToList()
+                };
+
+                return Ok(new OneClickBuyResponse
+                {
+                    Success = true,
+                    Message = "Order placed successfully via One-Click Buy",
+                    Order = orderDto,
+                    PaymentStatus = paymentResponse.Status,
+                    TransactionId = paymentResponse.TransactionId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing One-Click Buy");
+                return StatusCode(500, new OneClickBuyResponse
+                {
+                    Success = false,
+                    Message = "An error occurred while processing your order. Please try again."
+                });
+            }
         }
     }
 }

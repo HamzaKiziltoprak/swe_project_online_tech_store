@@ -20,6 +20,7 @@ namespace Backend.Data
         public DbSet<ProductSpecification> ProductSpecifications { get; set; }
         public DbSet<OrderReturn> OrderReturns { get; set; }
         public DbSet<Favorite> Favorites { get; set; }
+        public DbSet<Transaction> Transactions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
