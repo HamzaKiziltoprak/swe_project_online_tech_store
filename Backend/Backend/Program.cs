@@ -116,18 +116,20 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// Seed the database
+// Apply migrations and seed the database
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     try
     {
+        var context = services.GetRequiredService<DataContext>();
+        context.Database.Migrate(); // Apply pending migrations
         await DbSeeder.SeedRolesAndAdminAsync(services);
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred during seeding");
+        logger.LogError(ex, "An error occurred during migration or seeding");
     }
 }
 
