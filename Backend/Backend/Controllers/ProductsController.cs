@@ -894,5 +894,231 @@ namespace Backend.Controllers
                     "Spesifikasyon silinirken bir hata oluştu"));
             }
         }
+
+        /// <summary>
+        /// Compare multiple products by their specifications
+        /// </summary>
+        [HttpPost("compare")]
+        public async Task<ActionResult<ApiResponse<ProductComparisonResult>>> CompareProducts(
+            [FromBody] CompareProductsDto dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ApiResponse<ProductComparisonResult>.FailureResponse(
+                        "Validation failed",
+                        ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList()));
+                }
+
+                if (dto.ProductIds == null || dto.ProductIds.Count < 2)
+                {
+                    return BadRequest(ApiResponse<ProductComparisonResult>.FailureResponse(
+                        "At least 2 products are required for comparison"));
+                }
+
+                if (dto.ProductIds.Count > 5)
+                {
+                    return BadRequest(ApiResponse<ProductComparisonResult>.FailureResponse(
+                        "Maximum 5 products can be compared at once"));
+                }
+
+                // Fetch products with specifications
+                var products = await _context.Products
+                    .Include(p => p.Category)
+                    .Include(p => p.ProductSpecifications)
+                    .Where(p => dto.ProductIds.Contains(p.ProductID) && p.IsActive)
+                    .ToListAsync();
+
+                if (products.Count != dto.ProductIds.Count)
+                {
+                    return NotFound(ApiResponse<ProductComparisonResult>.FailureResponse(
+                        "One or more products not found or inactive"));
+                }
+
+                // Build comparison DTOs
+                var comparisonProducts = products.Select(p => new ProductComparisonDto
+                {
+                    ProductID = p.ProductID,
+                    ProductName = p.ProductName,
+                    Brand = p.Brand,
+                    Price = p.Price,
+                    ImageUrl = p.ImageUrl,
+                    Stock = p.Stock,
+                    CategoryName = p.Category?.CategoryName ?? "Uncategorized",
+                    Specifications = p.ProductSpecifications.ToDictionary(
+                        ps => ps.SpecName,
+                        ps => ps.SpecValue
+                    )
+                }).ToList();
+
+                // Get all unique specification keys
+                var allSpecKeys = products
+                    .SelectMany(p => p.ProductSpecifications.Select(ps => ps.SpecName))
+                    .Distinct()
+                    .OrderBy(k => k)
+                    .ToList();
+
+                // Build comparison matrix
+                var comparisonAttributes = new List<ComparisonAttribute>();
+
+                // Add basic attributes
+                comparisonAttributes.Add(new ComparisonAttribute
+                {
+                    AttributeName = "Brand",
+                    ProductValues = products.ToDictionary(p => p.ProductID, p => p.Brand),
+                    HasDifference = products.Select(p => p.Brand).Distinct().Count() > 1
+                });
+
+                comparisonAttributes.Add(new ComparisonAttribute
+                {
+                    AttributeName = "Price",
+                    ProductValues = products.ToDictionary(p => p.ProductID, p => $"${p.Price:N2}"),
+                    HasDifference = products.Select(p => p.Price).Distinct().Count() > 1
+                });
+
+                comparisonAttributes.Add(new ComparisonAttribute
+                {
+                    AttributeName = "Stock Status",
+                    ProductValues = products.ToDictionary(p => p.ProductID, p => p.Stock > 0 ? "In Stock" : "Out of Stock"),
+                    HasDifference = products.Select(p => p.Stock > 0).Distinct().Count() > 1
+                });
+
+                // Add specifications
+                foreach (var specKey in allSpecKeys)
+                {
+                    var productValues = new Dictionary<int, string>();
+                    var values = new List<string>();
+
+                    foreach (var product in products)
+                    {
+                        var spec = product.ProductSpecifications.FirstOrDefault(ps => ps.SpecName == specKey);
+                        var value = spec?.SpecValue ?? "N/A";
+                        productValues[product.ProductID] = value;
+                        values.Add(value);
+                    }
+
+                    comparisonAttributes.Add(new ComparisonAttribute
+                    {
+                        AttributeName = specKey,
+                        ProductValues = productValues,
+                        HasDifference = values.Where(v => v != "N/A").Distinct().Count() > 1
+                    });
+                }
+
+                // Get common categories
+                var categories = products
+                    .Select(p => p.Category?.CategoryName)
+                    .Where(c => !string.IsNullOrEmpty(c))
+                    .Distinct()
+                    .ToList();
+
+                var result = new ProductComparisonResult
+                {
+                    Products = comparisonProducts,
+                    Attributes = comparisonAttributes,
+                    CommonCategories = categories!,
+                    ComparisonSummary = $"Comparing {products.Count} products across {allSpecKeys.Count} specifications"
+                };
+
+                _logger.LogInformation($"Product comparison: {products.Count} products, {allSpecKeys.Count} specs");
+
+                return Ok(ApiResponse<ProductComparisonResult>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error comparing products");
+                return StatusCode(500, ApiResponse<ProductComparisonResult>.FailureResponse(
+                    "An error occurred while comparing products"));
+            }
+        }
+
+        /// <summary>
+        /// Get products in the same category for comparison suggestions
+        /// </summary>
+        [HttpGet("{id}/similar")]
+        public async Task<ActionResult<ApiResponse<List<ComparisonListItemDto>>>> GetSimilarProducts(
+            int id,
+            [FromQuery] int limit = 5)
+        {
+            try
+            {
+                var product = await _context.Products
+                    .Include(p => p.Category)
+                    .FirstOrDefaultAsync(p => p.ProductID == id);
+
+                if (product == null)
+                {
+                    return NotFound(ApiResponse<List<ComparisonListItemDto>>.FailureResponse("Product not found"));
+                }
+
+                var similarProducts = await _context.Products
+                    .Include(p => p.Category)
+                    .Where(p => p.CategoryID == product.CategoryID 
+                             && p.ProductID != id 
+                             && p.IsActive)
+                    .OrderBy(p => Math.Abs(p.Price - product.Price)) // Sort by price similarity
+                    .Take(limit)
+                    .Select(p => new ComparisonListItemDto
+                    {
+                        ProductID = p.ProductID,
+                        ProductName = p.ProductName,
+                        Brand = p.Brand,
+                        Price = p.Price,
+                        ImageUrl = p.ImageUrl,
+                        CategoryName = p.Category != null ? p.Category.CategoryName : "Uncategorized",
+                        AddedAt = DateTime.UtcNow
+                    })
+                    .ToListAsync();
+
+                return Ok(ApiResponse<List<ComparisonListItemDto>>.SuccessResponse(similarProducts));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching similar products");
+                return StatusCode(500, ApiResponse<List<ComparisonListItemDto>>.FailureResponse(
+                    "An error occurred while fetching similar products"));
+            }
+        }
+
+        /// <summary>
+        /// Get comparison-ready product details (minimal info for comparison list)
+        /// </summary>
+        [HttpGet("comparison-details")]
+        public async Task<ActionResult<ApiResponse<List<ComparisonListItemDto>>>> GetComparisonDetails(
+            [FromQuery] List<int> productIds)
+        {
+            try
+            {
+                if (productIds == null || !productIds.Any())
+                {
+                    return BadRequest(ApiResponse<List<ComparisonListItemDto>>.FailureResponse(
+                        "Product IDs are required"));
+                }
+
+                var products = await _context.Products
+                    .Include(p => p.Category)
+                    .Where(p => productIds.Contains(p.ProductID) && p.IsActive)
+                    .Select(p => new ComparisonListItemDto
+                    {
+                        ProductID = p.ProductID,
+                        ProductName = p.ProductName,
+                        Brand = p.Brand,
+                        Price = p.Price,
+                        ImageUrl = p.ImageUrl,
+                        CategoryName = p.Category != null ? p.Category.CategoryName : "Uncategorized",
+                        AddedAt = DateTime.UtcNow
+                    })
+                    .ToListAsync();
+
+                return Ok(ApiResponse<List<ComparisonListItemDto>>.SuccessResponse(products));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching comparison details");
+                return StatusCode(500, ApiResponse<List<ComparisonListItemDto>>.FailureResponse(
+                    "An error occurred while fetching comparison details"));
+            }
+        }
     }
 }
