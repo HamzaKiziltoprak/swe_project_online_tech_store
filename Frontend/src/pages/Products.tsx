@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
-import type { Category, ProductSummary } from '../lib/api';
+import type { Category, ProductSummary, Brand } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import '../styles/Products.css';
 
 interface FiltersState {
   searchTerm: string;
-  brand: string;
+  brandIds: number[];
   categoryId: string;
   minPrice: string;
   maxPrice: string;
@@ -17,7 +17,7 @@ interface FiltersState {
 
 const defaultFilters: FiltersState = {
   searchTerm: '',
-  brand: '',
+  brandIds: [],
   categoryId: '',
   minPrice: '',
   maxPrice: '',
@@ -31,6 +31,7 @@ const Products = () => {
   const [filters, setFilters] = useState<FiltersState>(defaultFilters);
   const [products, setProducts] = useState<ProductSummary[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -54,19 +55,25 @@ const Products = () => {
         setCategories(flattenCategories(data));
       })
       .catch(() => setCategories([]));
+
+    api.getBrands()
+      .then(setBrands)
+      .catch(() => setBrands([]));
   }, []);
 
   useEffect(() => {
     setLoading(true);
     setError(null);
-    const query = {
+    const query: any = {
       SearchTerm: filters.searchTerm,
-      Brand: filters.brand,
       CategoryId: filters.categoryId ? Number(filters.categoryId) : undefined,
       MinPrice: filters.minPrice ? Number(filters.minPrice) : undefined,
       MaxPrice: filters.maxPrice ? Number(filters.maxPrice) : undefined,
       InStock: filters.inStockOnly ? true : undefined,
     };
+    if (filters.brandIds.length > 0) {
+      query.BrandIds = filters.brandIds.join(',');
+    }
     api
       .getProducts(query)
       .then((res) => setProducts(res.items))
@@ -88,7 +95,10 @@ const Products = () => {
   const activeFilters = useMemo(() => {
     const chips: string[] = [];
     if (filters.searchTerm) chips.push(`${t('search_label')}: ${filters.searchTerm}`);
-    if (filters.brand) chips.push(`${t('brand_label')}: ${filters.brand}`);
+    if (filters.brandIds.length > 0) {
+      const brandNames = filters.brandIds.map(id => brands.find(b => b.brandID === id)?.brandName).filter(Boolean);
+      chips.push(`${t('brand_label')}: ${brandNames.join(', ')}`);
+    }
     if (filters.categoryId) {
       const categoryName =
         categories.find((c) => String(c.categoryID) === filters.categoryId)?.categoryName ||
@@ -99,10 +109,19 @@ const Products = () => {
     if (filters.maxPrice) chips.push(`${t('price_max')} ${filters.maxPrice}`);
     if (filters.inStockOnly) chips.push(t('stock_in'));
     return chips;
-  }, [filters, categories, t]);
+  }, [filters, categories, brands, t]);
 
   const handleInputChange = (field: keyof FiltersState, value: string | boolean) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleBrandChange = (brandId: number) => {
+    setFilters(prev => {
+      const newBrandIds = prev.brandIds.includes(brandId)
+        ? prev.brandIds.filter(id => id !== brandId)
+        : [...prev.brandIds, brandId];
+      return { ...prev, brandIds: newBrandIds };
+    });
   };
 
   const clearFilters = () => setFilters(defaultFilters);
@@ -170,13 +189,19 @@ const Products = () => {
         {(filterSearch === '' || 'brand marka'.includes(filterSearch)) && (
           <div className="filter-group">
             <label>{t('brand_label')}</label>
-            <input
-              type="text"
-              value={filters.brand}
-              onChange={(e) => handleInputChange('brand', e.target.value)}
-              placeholder={t('brand_placeholder')}
-              className="filter-input"
-            />
+            <div className="brand-filter-list">
+              {brands.map(brand => (
+                <label key={brand.brandID} className="checkbox-row">
+                  <input
+                    type="checkbox"
+                    value={brand.brandID}
+                    checked={filters.brandIds.includes(brand.brandID)}
+                    onChange={() => handleBrandChange(brand.brandID)}
+                  />
+                  {brand.brandName}
+                </label>
+              ))}
+            </div>
           </div>
         )}
 

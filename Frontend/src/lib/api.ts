@@ -125,6 +125,12 @@ export interface Category {
   subCategories?: Category[];
 }
 
+export interface Brand {
+  brandID: number;
+  brandName: string;
+  productCount: number;
+}
+
 type FetchOptions = RequestInit & { token?: string | null };
 
 async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T> {
@@ -301,6 +307,10 @@ export const api = {
   },
   async getCategories() {
     const res = await apiFetch<ApiResponse<Category[]>>('/api/categories');
+    return res.data || [];
+  },
+  async getBrands() {
+    const res = await apiFetch<ApiResponse<Brand[]>>('/api/brands');
     return res.data || [];
   },
 };
