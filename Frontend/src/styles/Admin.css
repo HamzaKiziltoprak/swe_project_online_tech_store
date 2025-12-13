@@ -1,0 +1,34 @@
+.admin-page {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.stat-card {
+  background: var(--card-bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.stat-card span {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.stat-card strong {
+  display: block;
+  font-size: 1.4rem;
+  margin-top: 6px;
+}
+
+.error {
+  color: red;
+}

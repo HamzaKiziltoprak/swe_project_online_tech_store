@@ -1,0 +1,89 @@
+.cart-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cart-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cart-item {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: center;
+  background: var(--card-bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.cart-item .name {
+  margin: 0;
+  font-weight: 600;
+}
+
+.cart-item .price,
+.cart-item .subtotal {
+  margin: 0;
+  font-weight: 700;
+  color: var(--button-bg-color);
+}
+
+.qty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qty button {
+  border: 1px solid var(--border-color);
+  background: var(--card-bg-color);
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.cart-summary {
+  background: var(--card-bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cart-summary textarea {
+  min-height: 80px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.summary-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.summary-actions button {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.summary-actions button:last-child {
+  background: var(--button-bg-color);
+  color: #fff;
+}
+
+.success {
+  color: green;
+}
+
+.error {
+  color: red;
+}

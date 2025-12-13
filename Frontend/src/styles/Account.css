@@ -1,0 +1,61 @@
+.account-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel {
+  background: var(--card-bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.favorites-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.favorite-card {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px;
+  background: var(--background-color);
+}
+
+.favorite-card .name {
+  font-weight: 600;
+}
+
+.favorite-card .price {
+  color: var(--button-bg-color);
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  background: #e0f2fe;
+  color: #0ea5e9;
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.order-card {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px;
+  background: var(--background-color);
+}
+
+.order-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}

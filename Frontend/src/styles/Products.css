@@ -1,154 +1,171 @@
 .products-page-container {
-    display: flex;
-    gap: 20px;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 20px;
+  width: 100%;
+  margin: 0;
+  align-items: start;
 }
 
-/* ... existing filter styles ... */
 .filter-bar {
-    width: 200px;
-    border-right: 1px solid var(--border-color);
-    padding: 20px;
+  background: var(--card-bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
 }
 
 .filter-group {
-    margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
 }
 
-.filter-group h4 {
-    margin-top: 0;
+.filter-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
 }
 
-.filter-group label {
-    display: block;
-    margin-bottom: 5px;
+.filter-input {
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--background-color);
+  box-sizing: border-box;
+  width: 100%;
 }
 
-.filter-search-input {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    box-sizing: border-box; /* Ensures padding doesn't increase total width */
-    background-color: var(--background-color);
-    color: var(--text-color);
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.clear-button {
+  width: 100%;
+  border: 1px dashed var(--border-color);
+  background: transparent;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
 }
 
 .products-list {
-    flex-grow: 1;
-    padding: 20px;
+  background: transparent;
+  width: 100%;
 }
 
-/* Görüntüleme Seçenekleri Butonları */
 .view-options {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.view-options button {
-    padding: 8px 12px;
-    border: 1px solid var(--border-color);
-    background-color: var(--background-color);
-    color: var(--text-color);
-    cursor: pointer;
-    border-radius: 4px;
-    transition: background-color 0.2s, color 0.2s;
+.view-buttons button {
+  border: 1px solid var(--border-color);
+  background: var(--card-bg-color);
+  padding: 6px 10px;
+  margin-left: 6px;
+  cursor: pointer;
 }
 
-.view-options button:disabled {
-    background-color: var(--button-bg-color);
-    color: var(--button-text-color);
-    cursor: not-allowed;
+.chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0;
 }
 
-.view-options button:first-of-type {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
+.chip {
+  background: var(--card-bg-color);
+  border: 1px solid var(--border-color);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.9rem;
 }
 
-.view-options button:last-of-type {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-    border-left: none;
-}
-
-
-/* Ürün Izgarası (Grid View) */
 .products-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+.filter-bar input,
+.filter-bar select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.products-list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.product-card {
+  background: var(--card-bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+  align-items: center;
 }
 
 .products-grid .product-card {
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 16px;
-    text-align: center;
-    background-color: var(--header-bg-color);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s;
+  grid-template-columns: 1fr;
 }
 
-.products-grid .product-card:hover {
-    transform: translateY(-5px);
+.product-image {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 10px;
 }
 
-.products-grid .product-image {
-    max-width: 100%;
-    height: auto;
-    border-radius: 4px;
-    margin-bottom: 12px;
+.product-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
 }
 
-.products-grid .product-details {
-    text-align: center;
-}
-
-/* Ürün Listesi (List View) */
-.products-list-view {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.products-list-view .product-card {
-    display: flex;
-    align-items: center;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 16px;
-    background-color: var(--header-bg-color);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.products-list-view .product-image {
-    width: 120px;
-    height: 120px;
-    object-fit: cover;
-    border-radius: 4px;
-    margin-right: 20px;
-}
-
-.products-list-view .product-details {
-    flex-grow: 1;
-}
-
-.product-name {
-    font-size: 1.2rem;
-    margin: 0 0 8px 0;
+.brand-pill {
+  background: #e0f2fe;
+  color: #0ea5e9;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
 }
 
 .product-price {
-    font-size: 1.1rem;
-    font-weight: bold;
-    color: #007bff;
-    margin: 0 0 8px 0;
+  font-weight: 700;
+  color: var(--button-bg-color);
 }
 
-.product-description {
-    font-size: 0.9rem;
-    color: var(--text-color);
-    margin: 0;
+.stock {
+  font-size: 0.9rem;
+  color: #0ea5e9;
+}
+
+.product-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.product-actions button,
+.product-actions .link-button {
+  border: 1px solid var(--border-color);
+  background: var(--card-bg-color);
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.error {
+  color: red;
 }

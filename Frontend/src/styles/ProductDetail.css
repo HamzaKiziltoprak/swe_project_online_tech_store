@@ -1,0 +1,129 @@
+.product-detail-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.product-hero {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+  background: var(--card-bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.product-hero img {
+  width: 100%;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.product-info .brand {
+  color: #0ea5e9;
+  font-weight: 600;
+}
+
+.product-info .price {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--button-bg-color);
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.actions button {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+}
+
+.specs,
+.reviews,
+.related {
+  background: var(--card-bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.spec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.spec-item {
+  background: var(--background-color);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.spec-name {
+  font-weight: 600;
+}
+
+.reviews-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.review-card {
+  border-bottom: 1px solid var(--border-color);
+  padding: 10px 0;
+}
+
+.review-top {
+  display: flex;
+  justify-content: space-between;
+}
+
+.review-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.review-form textarea {
+  min-height: 80px;
+}
+
+.related-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.related-card {
+  display: block;
+  background: var(--background-color);
+  border-radius: 10px;
+  padding: 10px;
+  text-decoration: none;
+  color: var(--text-color);
+}
+
+.related-card img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.related-card .name {
+  font-weight: 600;
+}
+
+.related-card .price {
+  color: var(--button-bg-color);
+}
