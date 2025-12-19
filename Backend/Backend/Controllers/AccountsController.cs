@@ -428,7 +428,11 @@ namespace Backend.Controllers
 
             if (user.EmailConfirmed)
             {
-                return BadRequest(ApiResponse<string>.FailureResponse("Email already confirmed"));
+                // Email zaten onaylanmış - bu bir success durumu olarak değerlendirilmeli
+                // (React StrictMode veya kullanıcının linke birden fazla tıklaması durumunda)
+                return Ok(ApiResponse<string>.SuccessResponse(
+                    "Email already confirmed! You can login."
+                ));
             }
 
             // Token is automatically URL-decoded by ASP.NET Core when coming from query string

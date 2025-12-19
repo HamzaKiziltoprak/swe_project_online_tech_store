@@ -222,6 +222,12 @@ export const api = {
       body: JSON.stringify(payload),
     });
   },
+  async resendConfirmationEmail(email: string) {
+    return apiFetch<ApiResponse<string>>('/api/accounts/resend-confirmation', {
+      method: 'POST',
+      body: JSON.stringify(email),
+    });
+  },
   async getProfile(token: string) {
     const res = await apiFetch<ApiResponse<any>>('/api/accounts/profile', { token });
     const data = res.data;
