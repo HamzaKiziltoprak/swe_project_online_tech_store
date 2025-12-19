@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import '../styles/ConfirmEmail.css';
@@ -11,9 +11,13 @@ const ConfirmEmail = () => {
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
+  const hasCalledRef = useRef(false); // React StrictMode duplicate call prevention
 
   useEffect(() => {
     const confirmEmail = async () => {
+      // Prevent duplicate API calls (React 18 StrictMode calls useEffect twice)
+      if (hasCalledRef.current) return;
+      hasCalledRef.current = true;
       const userId = searchParams.get('userId');
       const token = searchParams.get('token');
 
@@ -24,8 +28,10 @@ const ConfirmEmail = () => {
       }
 
       try {
+        const apiBase = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7100';
+        // Token zaten URL-encoded geldiği için tekrar encode etmiyoruz
         const response = await fetch(
-          `${API_BASE}/api/accounts/confirm-email?userId=${userId}&token=${encodeURIComponent(token)}`,
+          `${apiBase}/api/accounts/confirm-email?userId=${userId}&token=${token}`,
           {
             method: 'POST',
             headers: {

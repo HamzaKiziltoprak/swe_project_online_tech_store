@@ -428,14 +428,22 @@ namespace Backend.Controllers
 
             if (user.EmailConfirmed)
             {
-                return BadRequest(ApiResponse<string>.FailureResponse("Email already confirmed"));
+                // Email zaten onaylanmış - bu bir success durumu olarak değerlendirilmeli
+                // (React StrictMode veya kullanıcının linke birden fazla tıklaması durumunda)
+                return Ok(ApiResponse<string>.SuccessResponse(
+                    "Email already confirmed! You can login."
+                ));
             }
 
-            var decodedToken = HttpUtility.UrlDecode(token);
-            var result = await _userManager.ConfirmEmailAsync(user, decodedToken);
+            // Token is automatically URL-decoded by ASP.NET Core when coming from query string
+            // No need to decode again - it causes "Invalid token" errors
+            _logger.LogInformation($"Confirming email for user {user.Email} with token: {token.Substring(0, Math.Min(20, token.Length))}...");
+            
+            var result = await _userManager.ConfirmEmailAsync(user, token);
 
             if (!result.Succeeded)
             {
+                _logger.LogWarning($"Email confirmation failed for user {user.Email}. Errors: {string.Join(", ", result.Errors.Select(e => e.Description))}");
                 return BadRequest(ApiResponse<string>.FailureResponse(
                     "Email confirmation failed",
                     result.Errors.Select(e => e.Description).ToList()
