@@ -1,9 +1,11 @@
 using Backend.DTOs;
 using Backend.Models;
+using Backend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.Web;
 
 namespace Backend.Controllers
 {
@@ -13,16 +15,22 @@ namespace Backend.Controllers
     {
         private readonly UserManager<User> _userManager;
         private readonly RoleManager<Role> _roleManager;
+        private readonly IEmailService _emailService;
         private readonly ILogger<AccountsController> _logger;
+        private readonly IConfiguration _configuration;
 
         public AccountsController(
             UserManager<User> userManager, 
             RoleManager<Role> roleManager,
-            ILogger<AccountsController> logger)
+            IEmailService emailService,
+            ILogger<AccountsController> logger,
+            IConfiguration configuration)
         {
             _userManager = userManager;
             _roleManager = roleManager;
+            _emailService = emailService;
             _logger = logger;
+            _configuration = configuration;
         }
 
         // POST: api/accounts/register
@@ -73,7 +81,26 @@ namespace Backend.Controllers
             // Assign "Customer" role to the new user
             await _userManager.AddToRoleAsync(user, "Customer");
 
-            _logger.LogInformation($"New user registered: {user.Email}");
+            // Generate email confirmation token and send confirmation email
+            try
+            {
+                var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                var encodedToken = HttpUtility.UrlEncode(token);
+                var confirmationLink = $"{_configuration["AppUrl"]}/confirm-email?userId={user.Id}&token={encodedToken}";
+                
+                _logger.LogInformation($"Generated confirmation token for user {user.Email}: {token}");
+                _logger.LogInformation($"Encoded token: {encodedToken}");
+                _logger.LogInformation($"Confirmation link: {confirmationLink}");
+                
+                await _emailService.SendConfirmationEmailAsync(user.Email!, confirmationLink);
+                
+                _logger.LogInformation($"New user registered and confirmation email sent: {user.Email}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error sending confirmation email to {user.Email}");
+                // Continue even if email fails
+            }
 
             var userDto = new UserProfileDto
             {
@@ -88,7 +115,7 @@ namespace Backend.Controllers
 
             return Ok(ApiResponse<UserProfileDto>.SuccessResponse(
                 userDto,
-                "User registered successfully! Please use /login endpoint to get your access token."
+                "User registered successfully! Please check your email to confirm your account."
             ));
         }
 
@@ -381,6 +408,165 @@ namespace Backend.Controllers
             return Ok(ApiResponse<List<string>>.SuccessResponse(
                 roles,
                 $"Retrieved {roles.Count} roles"
+            ));
+        }
+
+        // POST: api/accounts/confirm-email
+        [HttpPost("confirm-email")]
+        public async Task<ActionResult<ApiResponse<string>>> ConfirmEmail([FromQuery] int userId, [FromQuery] string token)
+        {
+            if (string.IsNullOrEmpty(token))
+            {
+                return BadRequest(ApiResponse<string>.FailureResponse("Invalid token"));
+            }
+
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+            {
+                return NotFound(ApiResponse<string>.FailureResponse("User not found"));
+            }
+
+            if (user.EmailConfirmed)
+            {
+                return BadRequest(ApiResponse<string>.FailureResponse("Email already confirmed"));
+            }
+
+            var decodedToken = HttpUtility.UrlDecode(token);
+            var result = await _userManager.ConfirmEmailAsync(user, decodedToken);
+
+            if (!result.Succeeded)
+            {
+                return BadRequest(ApiResponse<string>.FailureResponse(
+                    "Email confirmation failed",
+                    result.Errors.Select(e => e.Description).ToList()
+                ));
+            }
+
+            _logger.LogInformation($"Email confirmed for user: {user.Email}");
+
+            return Ok(ApiResponse<string>.SuccessResponse(
+                "Email confirmed successfully! You can now login."
+            ));
+        }
+
+        // POST: api/accounts/resend-confirmation
+        [HttpPost("resend-confirmation")]
+        public async Task<ActionResult<ApiResponse<string>>> ResendConfirmationEmail([FromBody] string email)
+        {
+            if (string.IsNullOrEmpty(email))
+            {
+                return BadRequest(ApiResponse<string>.FailureResponse("Email is required"));
+            }
+
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+            {
+                return Ok(ApiResponse<string>.SuccessResponse(
+                    "If the email exists, a confirmation link has been sent."
+                ));
+            }
+
+            if (user.EmailConfirmed)
+            {
+                return BadRequest(ApiResponse<string>.FailureResponse("Email already confirmed"));
+            }
+
+            try
+            {
+                var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                var encodedToken = HttpUtility.UrlEncode(token);
+                var confirmationLink = $"{_configuration["AppUrl"]}/confirm-email?userId={user.Id}&token={encodedToken}";
+                
+                await _emailService.SendConfirmationEmailAsync(user.Email!, confirmationLink);
+                
+                _logger.LogInformation($"Confirmation email resent to: {user.Email}");
+
+                return Ok(ApiResponse<string>.SuccessResponse(
+                    "Confirmation email has been resent."
+                ));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error resending confirmation email to {email}");
+                return StatusCode(500, ApiResponse<string>.FailureResponse(
+                    "Error sending confirmation email"
+                ));
+            }
+        }
+
+        // POST: api/accounts/forgot-password
+        [HttpPost("forgot-password")]
+        public async Task<ActionResult<ApiResponse<string>>> ForgotPassword([FromBody] string email)
+        {
+            if (string.IsNullOrEmpty(email))
+            {
+                return BadRequest(ApiResponse<string>.FailureResponse("Email is required"));
+            }
+
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null || !user.EmailConfirmed)
+            {
+                return Ok(ApiResponse<string>.SuccessResponse(
+                    "If the email exists and is confirmed, a password reset link has been sent."
+                ));
+            }
+
+            try
+            {
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var encodedToken = HttpUtility.UrlEncode(token);
+                var resetLink = $"{_configuration["AppUrl"]}/reset-password?userId={user.Id}&token={encodedToken}";
+                
+                await _emailService.SendPasswordResetEmailAsync(user.Email!, resetLink);
+                
+                _logger.LogInformation($"Password reset email sent to: {user.Email}");
+
+                return Ok(ApiResponse<string>.SuccessResponse(
+                    "Password reset link has been sent to your email."
+                ));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error sending password reset email to {email}");
+                return StatusCode(500, ApiResponse<string>.FailureResponse(
+                    "Error sending password reset email"
+                ));
+            }
+        }
+
+        // POST: api/accounts/reset-password
+        [HttpPost("reset-password")]
+        public async Task<ActionResult<ApiResponse<string>>> ResetPassword([FromBody] ResetPasswordDto resetPasswordDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ApiResponse<string>.FailureResponse(
+                    "Validation failed",
+                    ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList()
+                ));
+            }
+
+            var user = await _userManager.FindByIdAsync(resetPasswordDto.UserId.ToString());
+            if (user == null)
+            {
+                return NotFound(ApiResponse<string>.FailureResponse("User not found"));
+            }
+
+            var decodedToken = HttpUtility.UrlDecode(resetPasswordDto.Token);
+            var result = await _userManager.ResetPasswordAsync(user, decodedToken, resetPasswordDto.NewPassword);
+
+            if (!result.Succeeded)
+            {
+                return BadRequest(ApiResponse<string>.FailureResponse(
+                    "Password reset failed",
+                    result.Errors.Select(e => e.Description).ToList()
+                ));
+            }
+
+            _logger.LogInformation($"Password reset successful for user: {user.Email}");
+
+            return Ok(ApiResponse<string>.SuccessResponse(
+                "Password has been reset successfully."
             ));
         }
     }

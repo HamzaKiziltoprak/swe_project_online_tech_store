@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.OpenApi.Models;
+using Backend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
+
+// Configure Email Settings
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // Configure Swagger with JWT support
 builder.Services.AddSwaggerGen(options =>
@@ -102,8 +107,11 @@ builder.Services.AddIdentityCore<User>(options =>
     options.User.RequireUniqueEmail = true;
     
     // Sign-in settings
-    options.SignIn.RequireConfirmedEmail = false;
+    options.SignIn.RequireConfirmedEmail = true; // Email confirmation required
     options.SignIn.RequireConfirmedPhoneNumber = false;
+    
+    // Token settings
+    options.Tokens.EmailConfirmationTokenProvider = TokenOptions.DefaultEmailProvider;
 })
     .AddRoles<Role>()
     .AddEntityFrameworkStores<DataContext>()

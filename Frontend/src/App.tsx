@@ -11,6 +11,7 @@ import AccountPage from './pages/AccountPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import AdminPage from './pages/AdminPage';
+import ConfirmEmail from './pages/ConfirmEmail';
 import { useAuth } from './context/AuthContext';
 
 function App() {
@@ -94,6 +95,7 @@ function App() {
           </Route>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/confirm-email" element={<ConfirmEmail />} />
         </Routes>
       </main>
     </div>
