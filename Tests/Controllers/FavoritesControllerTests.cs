@@ -50,8 +50,8 @@ namespace Tests.Controllers
             _controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = claimsPrincipal } };
 
             // Veritabanına ürün ekliyoruz.
-            var product1 = new Product { ProductID = 88, ProductName = "P1", Price = 10, Stock = 1, Brand = "B", Description = "D", ImageUrl = "I", IsActive = true };
-            var product2 = new Product { ProductID = 99, ProductName = "P2", Price = 20, Stock = 1, Brand = "B", Description = "D", ImageUrl = "I", IsActive = true };
+            var product1 = new Product { ProductID = 88, ProductName = "P1", Price = 10, Stock = 1, BrandID = 1, Description = "D", ImageUrl = "I", IsActive = true };
+            var product2 = new Product { ProductID = 99, ProductName = "P2", Price = 20, Stock = 1, BrandID = 1, Description = "D", ImageUrl = "I", IsActive = true };
 
             _context.Products.Add(product1);
             _context.Products.Add(product2);
@@ -104,7 +104,7 @@ namespace Tests.Controllers
             var productId = 30;
 
             // Ürün ekleniyor.
-            _context.Products.Add(new Product { ProductID = productId, ProductName = "Laptop", Price = 2000, Stock = 5, Brand = "Dell", Description = "Desc", ImageUrl = "img.jpg", IsActive = true });
+            _context.Products.Add(new Product { ProductID = productId, ProductName = "Laptop", Price = 2000, Stock = 5, BrandID = 1, Description = "Desc", ImageUrl = "img.jpg", IsActive = true });
             await _context.SaveChangesAsync();
             _context.ChangeTracker.Clear();
 
@@ -129,7 +129,7 @@ namespace Tests.Controllers
             SetupHttpContextWithUser(userId);
             var productId = 40;
 
-            _context.Products.Add(new Product { ProductID = productId, ProductName = "Tablet", Price = 500, Stock = 10, Brand = "Samsung", Description = "Desc", ImageUrl = "img.jpg", IsActive = true });
+            _context.Products.Add(new Product { ProductID = productId, ProductName = "Tablet", Price = 500, Stock = 10, BrandID = 1, Description = "Desc", ImageUrl = "img.jpg", IsActive = true });
             _context.Favorites.Add(new Favorite { UserID = userId, ProductID = productId });
             await _context.SaveChangesAsync();
             _context.ChangeTracker.Clear();

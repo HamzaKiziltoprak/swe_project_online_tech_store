@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using System.Web;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace Backend.Controllers
 {
@@ -14,6 +17,7 @@ namespace Backend.Controllers
     public class AccountsController : ControllerBase
     {
         private readonly UserManager<User> _userManager;
+        private readonly SignInManager<User> _signInManager;
         private readonly RoleManager<Role> _roleManager;
         private readonly IEmailService _emailService;
         private readonly ILogger<AccountsController> _logger;
@@ -21,16 +25,106 @@ namespace Backend.Controllers
 
         public AccountsController(
             UserManager<User> userManager, 
+            SignInManager<User> signInManager,
             RoleManager<Role> roleManager,
             IEmailService emailService,
             ILogger<AccountsController> logger,
             IConfiguration configuration)
         {
             _userManager = userManager;
+            _signInManager = signInManager;
             _roleManager = roleManager;
             _emailService = emailService;
             _logger = logger;
             _configuration = configuration;
+        }
+
+        // POST: api/accounts/login
+        [HttpPost("login")]
+        public async Task<ActionResult<ApiResponse<object>>> Login([FromBody] LoginDto loginDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ApiResponse<object>.FailureResponse(
+                    "Validation failed",
+                    ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList()
+                ));
+            }
+
+            var user = await _userManager.FindByEmailAsync(loginDto.Email);
+            if (user == null)
+            {
+                return Unauthorized(ApiResponse<object>.FailureResponse("Invalid email or password"));
+            }
+
+            // Check if email is confirmed
+            if (!user.EmailConfirmed)
+            {
+                return Unauthorized(ApiResponse<object>.FailureResponse("Email not confirmed. Please check your email."));
+            }
+
+            var result = await _signInManager.CheckPasswordSignInAsync(user, loginDto.Password, lockoutOnFailure: true);
+            
+            if (result.Succeeded)
+            {
+                var roles = await _userManager.GetRolesAsync(user);
+                var token = GenerateJwtToken(user, roles);
+
+                var response = new
+                {
+                    token,
+                    user = new UserProfileDto
+                    {
+                        Id = user.Id,
+                        Email = user.Email!,
+                        FirstName = user.FirstName,
+                        LastName = user.LastName,
+                        Address = user.Address,
+                        CreatedAt = user.CreatedAt,
+                        Roles = roles.ToList()
+                    }
+                };
+
+                _logger.LogInformation($"User logged in: {user.Email}");
+                return Ok(ApiResponse<object>.SuccessResponse(response, "Login successful"));
+            }
+
+            if (result.IsLockedOut)
+            {
+                return Unauthorized(ApiResponse<object>.FailureResponse("Account locked due to multiple failed attempts"));
+            }
+
+            return Unauthorized(ApiResponse<object>.FailureResponse("Invalid email or password"));
+        }
+
+        private string GenerateJwtToken(User user, IList<string> roles)
+        {
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Email, user.Email!),
+                new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
+
+            foreach (var role in roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var expires = DateTime.UtcNow.AddHours(1);
+
+            var token = new JwtSecurityToken(
+                issuer: _configuration["Jwt:Issuer"],
+                audience: _configuration["Jwt:Audience"],
+                claims: claims,
+                expires: expires,
+                signingCredentials: creds
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
         // POST: api/accounts/register

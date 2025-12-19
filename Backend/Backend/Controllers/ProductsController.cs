@@ -538,13 +538,16 @@ namespace Backend.Controllers
         }
 
         // DELETE: api/products/{id}/permanent
-        // Ürünü kalıcı olarak sil (Hard Delete - Sadece Admin - Dikkatli kullan!)
+        // ⚠️ DANGEROUS: Ürünü kalıcı olarak sil (Hard Delete - Sadece Admin)
+        // ⚠️ Bu işlem GERİ ALINAMAZ! Veri tamamen silinir.
+        // ⚠️ Soft delete (normal DELETE) kullanımı önerilir.
         [HttpDelete("{id}/permanent")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<ApiResponse<object>>> PermanentDeleteProduct(int id)
         {
             try
             {
+                _logger.LogWarning("⚠️ PERMANENT DELETE ATTEMPT: Product ID {ProductId} - This is a dangerous operation!", id);
                 var product = await _context.Products
                     .Include(p => p.ProductReviews)
                     .Include(p => p.ProductImages)

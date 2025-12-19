@@ -54,7 +54,7 @@ namespace Tests.Controllers
         public async Task GetProductReviews_ShouldReturnReviews_WhenProductExists()
         {
             // Test verisi olarak ürün ve iki yorum ekliyoruz.
-            var product = new Product { ProductID = 1, ProductName = "Phone", Price = 100, Stock=10, Brand="B", Description="D", ImageUrl="I", IsActive=true };
+            var product = new Product { ProductID = 1, ProductName = "Phone", Price = 100, Stock=10, BrandID=1, Description="D", ImageUrl="I", IsActive=true };
             _context.Products.Add(product);
             
             _context.ProductReviews.Add(new ProductReview { ReviewID = 1, ProductID = 1, UserID = 1, Rating = 5, Comment = "Good", ReviewDate = DateTime.UtcNow });
@@ -83,7 +83,7 @@ namespace Tests.Controllers
             _context.Users.Add(user);
 
             // Ürün oluşturuyoruz.
-            var product = new Product { ProductID = 1, ProductName = "Phone", Price=10, Stock=1, Brand="B", Description="D", ImageUrl="I", IsActive=true };
+            var product = new Product { ProductID = 1, ProductName = "Phone", Price=10, Stock=1, BrandID=1, Description="D", ImageUrl="I", IsActive=true };
             _context.Products.Add(product);
             
             // Aynı kullanıcı tarafından verilen iki farklı rating ekleniyor.
@@ -115,7 +115,7 @@ namespace Tests.Controllers
             _mockUserManager.Setup(x => x.FindByIdAsync(userId.ToString())).ReturnsAsync(user);
 
             // Test ürünü oluşturuyoruz.
-            var product = new Product { ProductID = 10, ProductName = "Item", Price=10, Stock=1, Brand="B", Description="D", ImageUrl="I", IsActive=true };
+            var product = new Product { ProductID = 10, ProductName = "Item", Price=10, Stock=1, BrandID=1, Description="D", ImageUrl="I", IsActive=true };
             _context.Products.Add(product);
 
             // Kullanıcının ürünü satın aldığı bir sipariş ekliyoruz.
@@ -151,7 +151,7 @@ namespace Tests.Controllers
             _mockUserManager.Setup(x => x.FindByIdAsync(userId.ToString())).ReturnsAsync(user);
 
             // Ürün ekleniyor.
-            var product = new Product { ProductID = 20, ProductName="P", Price=10, Stock=1, Brand="B", Description="D", ImageUrl="I", IsActive=true };
+            var product = new Product { ProductID = 20, ProductName="P", Price=10, Stock=1, BrandID=1, Description="D", ImageUrl="I", IsActive=true };
             _context.Products.Add(product);
             
             // Daha önce atılmış yorum ekleniyor.
@@ -182,7 +182,7 @@ namespace Tests.Controllers
             var user = new User { Id = userId, UserName = "Reviewer", FirstName = "F", LastName = "L", Email = "e@m.com" };
             _context.Users.Add(user);
             
-            var product = new Product { ProductID = 1, ProductName = "P", Price=10, Stock=1, Brand="B", Description="D", ImageUrl="I", IsActive=true };
+            var product = new Product { ProductID = 1, ProductName = "P", Price=10, Stock=1, BrandID=1, Description="D", ImageUrl="I", IsActive=true };
             _context.Products.Add(product);
 
             // Kullanıcıya ait bir yorum ekliyoruz.
@@ -217,7 +217,7 @@ namespace Tests.Controllers
             var otherUser = new User { Id = otherUserId, UserName = "Other", FirstName = "F", LastName = "L", Email = "e@m.com" };
             _context.Users.Add(otherUser);
 
-            var product = new Product { ProductID = 1, ProductName = "P", Price=10, Stock=1, Brand="B", Description="D", ImageUrl="I", IsActive=true };
+            var product = new Product { ProductID = 1, ProductName = "P", Price=10, Stock=1, BrandID=1, Description="D", ImageUrl="I", IsActive=true };
             _context.Products.Add(product);
 
             // Yorum başka kullanıcıya ait
@@ -246,7 +246,7 @@ namespace Tests.Controllers
             var user = new User { Id = userId, UserName = "Reviewer", FirstName = "F", LastName = "L", Email = "e@m.com" };
             _context.Users.Add(user);
 
-            var product = new Product { ProductID = productId, ProductName = "P", Price=10, Stock=1, Brand="B", Description="D", ImageUrl="I", IsActive=true };
+            var product = new Product { ProductID = productId, ProductName = "P", Price=10, Stock=1, BrandID=1, Description="D", ImageUrl="I", IsActive=true };
             _context.Products.Add(product);
 
             var review = new ProductReview { ReviewID = reviewId, ProductID = productId, UserID = userId, IsApproved = false, Comment = "Test" };
@@ -278,7 +278,7 @@ namespace Tests.Controllers
             var user = new User { Id = userId, UserName = "testuser", FirstName = "Test", LastName = "User" };
             _context.Users.Add(user);
 
-            var product = new Product { ProductID = productId, ProductName = "Test Product", Price = 100, Stock = 10, Brand = "Test", Description = "Test", ImageUrl = "test.jpg" };
+            var product = new Product { ProductID = productId, ProductName = "Test Product", Price = 100, Stock = 10, BrandID = 1, Description = "Test", ImageUrl = "test.jpg" };
             _context.Products.Add(product);
 
             var review = new ProductReview { ReviewID = reviewId, ProductID = productId, UserID = userId, IsApproved = false, Comment = "Test" };
@@ -324,7 +324,7 @@ namespace Tests.Controllers
             var user = new User { Id = userId, UserName = "testuser", FirstName = "Test", LastName = "User" };
             _context.Users.Add(user);
 
-            var product = new Product { ProductID = productId, ProductName = "Test Product", Price = 100, Stock = 10, Brand = "Test", Description = "Test", ImageUrl = "test.jpg" };
+            var product = new Product { ProductID = productId, ProductName = "Test Product", Price = 100, Stock = 10, BrandID = 1, Description = "Test", ImageUrl = "test.jpg" };
             _context.Products.Add(product);
 
             var approvedReview = new ProductReview { ReviewID = 1, ProductID = productId, UserID = userId, IsApproved = true, Comment = "Approved", Rating = 5 };
@@ -355,7 +355,7 @@ namespace Tests.Controllers
             var user = new User { Id = userId, UserName = "testuser", FirstName = "Test", LastName = "User" };
             _context.Users.Add(user);
 
-            var product = new Product { ProductID = productId, ProductName = "Test Product", Price = 100, Stock = 10, Brand = "Test", Description = "Test", ImageUrl = "test.jpg" };
+            var product = new Product { ProductID = productId, ProductName = "Test Product", Price = 100, Stock = 10, BrandID = 1, Description = "Test", ImageUrl = "test.jpg" };
             _context.Products.Add(product);
 
             var approvedReview = new ProductReview { ReviewID = 1, ProductID = productId, UserID = userId, IsApproved = true, Comment = "Approved", Rating = 5 };

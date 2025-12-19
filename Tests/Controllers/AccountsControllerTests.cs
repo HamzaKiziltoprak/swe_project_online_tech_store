@@ -1,9 +1,11 @@
 using Backend.Controllers;
 using Backend.DTOs;
 using Backend.Models;
+using Backend.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Security.Claims;
@@ -16,13 +18,22 @@ namespace Tests.Controllers
         // UserManager yapısını taklit etmek için oluşturduğumuz sahte nesne
         // Gerçek veritabanına gitmeden kullanıcı işlemlerini test etmemizi sağlıyor
         private readonly Mock<UserManager<User>> _mockUserManager;
+        
+        // SignInManager yapısını taklit ediyoruz
+        private readonly Mock<SignInManager<User>> _mockSignInManager;
 
         // RoleManager yapısını taklit ediyoruz
         // Rollerle ilgili testlerde gerçek role store'a ihtiyaç duymadan işlem yapmamızı sağlıyor
         private readonly Mock<RoleManager<Role>> _mockRoleManager;
+        
+        // Email service'i taklit ediyoruz
+        private readonly Mock<IEmailService> _mockEmailService;
 
         // Controller içindeki loglama işlemlerinin testte hata vermemesi için sahte logger oluşturuyoruz
         private readonly Mock<ILogger<AccountsController>> _mockLogger;
+        
+        // Configuration'ı taklit ediyoruz (JWT için)
+        private readonly Mock<IConfiguration> _mockConfiguration;
 
         // Testlerde kullanacağımız AccountsController örneği
         private readonly AccountsController _controller;
@@ -34,18 +45,35 @@ namespace Tests.Controllers
             _mockUserManager = new Mock<UserManager<User>>(
                 userStore.Object, null, null, null, null, null, null, null, null);
 
+            // SignInManager mock
+            _mockSignInManager = new Mock<SignInManager<User>>(
+                _mockUserManager.Object,
+                Mock.Of<IHttpContextAccessor>(),
+                Mock.Of<IUserClaimsPrincipalFactory<User>>(),
+                null, null, null, null);
+
             // RoleManager'ın ihtiyaç duyduğu role store da sahte olarak oluşturuluyor
             var roleStore = new Mock<IRoleStore<Role>>();
             _mockRoleManager = new Mock<RoleManager<Role>>(
                 roleStore.Object, null, null, null, null);
 
+            _mockEmailService = new Mock<IEmailService>();
             _mockLogger = new Mock<ILogger<AccountsController>>();
+            
+            // JWT configuration mock
+            _mockConfiguration = new Mock<IConfiguration>();
+            _mockConfiguration.Setup(x => x["Jwt:Key"]).Returns("ThisIsASecretKeyForJWTTokenGenerationWithAtLeast32Characters!");
+            _mockConfiguration.Setup(x => x["Jwt:Issuer"]).Returns("https://localhost:7100");
+            _mockConfiguration.Setup(x => x["Jwt:Audience"]).Returns("https://localhost:7100");
 
             // Controller'ı tüm bu sahte bağımlılıklarla kuruyoruz
             _controller = new AccountsController(
                 _mockUserManager.Object,
+                _mockSignInManager.Object,
                 _mockRoleManager.Object,
-                _mockLogger.Object
+                _mockEmailService.Object,
+                _mockLogger.Object,
+                _mockConfiguration.Object
             );
         }
 

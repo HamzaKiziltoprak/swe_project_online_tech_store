@@ -48,7 +48,7 @@ namespace Tests.Controllers
             {
                 ProductID = 1,
                 ProductName = "Product 1",
-                Brand = "Brand A",
+                BrandID = 1,
                 Description = "Description",
                 Price = 100,
                 Stock = 50,
@@ -62,7 +62,7 @@ namespace Tests.Controllers
             {
                 ProductID = 2,
                 ProductName = "Product 2",
-                Brand = "Brand B",
+                BrandID = 1,
                 Description = "Description",
                 Price = 200,
                 Stock = 5,
@@ -140,7 +140,7 @@ namespace Tests.Controllers
             {
                 ProductID = 1,
                 ProductName = "Best Seller",
-                Brand = "Brand A",
+                BrandID = 1,
                 Description = "Description",
                 Price = 100,
                 Stock = 50,
@@ -153,7 +153,7 @@ namespace Tests.Controllers
             {
                 ProductID = 2,
                 ProductName = "Average Seller",
-                Brand = "Brand B",
+                BrandID = 1,
                 Description = "Description",
                 Price = 200,
                 Stock = 30,
@@ -225,7 +225,7 @@ namespace Tests.Controllers
             {
                 ProductID = 1,
                 ProductName = "Laptop",
-                Brand = "Brand A",
+                BrandID = 1,
                 Description = "Description",
                 Price = 1000,
                 Stock = 10,
@@ -238,7 +238,7 @@ namespace Tests.Controllers
             {
                 ProductID = 2,
                 ProductName = "Shirt",
-                Brand = "Brand B",
+                BrandID = 1,
                 Description = "Description",
                 Price = 50,
                 Stock = 100,
@@ -370,7 +370,7 @@ namespace Tests.Controllers
             {
                 ProductID = 1,
                 ProductName = "Test Product",
-                Brand = "Test Brand",
+                BrandID = 1,
                 Description = "Description",
                 Price = 500,
                 Stock = 10,

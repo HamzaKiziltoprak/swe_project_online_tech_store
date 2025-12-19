@@ -26,6 +26,14 @@ namespace Tests.Controllers
                 .Options;
             _context = new DataContext(options);
 
+            // ===== MOCK DATA START - Testler için gerekli sahte veriler =====
+            // Bu bölüm testlerin çalışması için gereklidir
+            // Silmek isterseniz "MOCK DATA START" ile "MOCK DATA END" arasını silin
+            _context.Brands.Add(new Brand { BrandID = 1, BrandName = "Test Brand", Description = "Test Brand Description" });
+            _context.Categories.Add(new Category { CategoryID = 1, CategoryName = "Test Category" });
+            _context.SaveChanges();
+            // ===== MOCK DATA END =====
+
             var userStoreMock = new Mock<IUserStore<User>>();
             _mockUserManager = new Mock<UserManager<User>>(
                 userStoreMock.Object, null, null, null, null, null, null, null, null);

@@ -79,7 +79,7 @@ namespace Tests.Controllers
             _mockUserManager.Setup(x => x.FindByIdAsync(userId.ToString())).ReturnsAsync(user);
 
             // Ürün ve sepet içeriğinin veritabanına eklenmesi
-            var product = new Product { ProductID = 10, ProductName = "Laptop", Price = 1000, Stock = 5, Brand="B", Description="D", ImageUrl="I" };
+            var product = new Product { ProductID = 10, ProductName = "Laptop", Price = 1000, Stock = 5, BrandID=1, Description="D", ImageUrl="I" };
             _context.Products.Add(product);
             _context.CartItems.Add(new CartItem { CartItemID = 1, UserID = userId, ProductID = 10, Count = 1 });
             await _context.SaveChangesAsync();
@@ -122,7 +122,7 @@ namespace Tests.Controllers
             _mockUserManager.Setup(x => x.FindByIdAsync(userId.ToString())).ReturnsAsync(user);
 
             // Ürünün stokta az olması ve sepetin daha fazla istemesi durumu
-            var product = new Product { ProductID = 20, ProductName = "Phone", Price = 500, Stock = 2, Brand="B", Description="D", ImageUrl="I" };
+            var product = new Product { ProductID = 20, ProductName = "Phone", Price = 500, Stock = 2, BrandID=1, Description="D", ImageUrl="I" };
             _context.Products.Add(product);
             _context.CartItems.Add(new CartItem { UserID = userId, ProductID = 20, Count = 5 });
             await _context.SaveChangesAsync();
@@ -181,7 +181,7 @@ namespace Tests.Controllers
             _mockUserManager.Setup(x => x.FindByIdAsync(userId.ToString())).ReturnsAsync(user);
 
             // Ürün ve sipariş test ortamına ekleniyor
-            var product = new Product { ProductID = 30, Stock = 10, Brand="B", Description="D", ImageUrl="I", ProductName="P", Price=10 };
+            var product = new Product { ProductID = 30, Stock = 10, BrandID=1, Description="D", ImageUrl="I", ProductName="P", Price=10 };
             _context.Products.Add(product);
 
             var order = new Order { OrderID = 200, UserID = userId, Status = "Pending", TotalAmount = 10, ShippingAddress="Addr" };
@@ -314,7 +314,7 @@ namespace Tests.Controllers
                 ProductName = "Gaming Laptop",
                 Price = 1500m,
                 Stock = 10,
-                Brand = "Dell",
+                BrandID = 1,
                 Description = "High-end laptop",
                 ImageUrl = "laptop.jpg",
                 IsActive = true
@@ -391,7 +391,7 @@ namespace Tests.Controllers
                 ProductName = "Laptop",
                 Price = 1000m,
                 Stock = 5,
-                Brand = "HP",
+                BrandID = 1,
                 Description = "Standard laptop",
                 ImageUrl = "laptop.jpg",
                 IsActive = true
@@ -476,7 +476,7 @@ namespace Tests.Controllers
                 ProductName = "Limited Stock Item",
                 Price = 500m,
                 Stock = 2,
-                Brand = "Test",
+                BrandID = 1,
                 Description = "Low stock",
                 ImageUrl = "item.jpg",
                 IsActive = true
@@ -516,7 +516,7 @@ namespace Tests.Controllers
                 ProductName = "Inactive Product",
                 Price = 100m,
                 Stock = 10,
-                Brand = "Test",
+                BrandID = 1,
                 Description = "Not available",
                 ImageUrl = "item.jpg",
                 IsActive = false // Product is inactive

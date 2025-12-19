@@ -28,6 +28,7 @@ namespace Tests.Controllers
                 .Options;
             _context = new DataContext(options);
 
+
             _mockLogger = new Mock<ILogger<ProductsController>>();
 
             _controller = new ProductsController(_context, _mockLogger.Object);
@@ -44,7 +45,7 @@ namespace Tests.Controllers
             {
                 ProductID = 1,
                 ProductName = "Low Stock Product 1",
-                Brand = "Brand A",
+                BrandID = 1,
                 Description = "Description",
                 Price = 100,
                 Stock = 5,
@@ -58,7 +59,7 @@ namespace Tests.Controllers
             {
                 ProductID = 2,
                 ProductName = "Low Stock Product 2",
-                Brand = "Brand B",
+                BrandID = 1,
                 Description = "Description",
                 Price = 200,
                 Stock = 8,
@@ -72,7 +73,7 @@ namespace Tests.Controllers
             {
                 ProductID = 3,
                 ProductName = "Normal Stock Product",
-                Brand = "Brand C",
+                BrandID = 1,
                 Description = "Description",
                 Price = 150,
                 Stock = 50,
@@ -107,7 +108,7 @@ namespace Tests.Controllers
             {
                 ProductID = 1,
                 ProductName = "Normal Stock Product",
-                Brand = "Brand A",
+                BrandID = 1,
                 Description = "Description",
                 Price = 100,
                 Stock = 50,
@@ -141,7 +142,7 @@ namespace Tests.Controllers
             {
                 ProductID = 1,
                 ProductName = "Product with 8 stock",
-                Brand = "Brand A",
+                BrandID = 1,
                 Description = "Description",
                 Price = 100,
                 Stock = 8,
@@ -155,7 +156,7 @@ namespace Tests.Controllers
             {
                 ProductID = 2,
                 ProductName = "Product with 3 stock",
-                Brand = "Brand B",
+                BrandID = 1,
                 Description = "Description",
                 Price = 200,
                 Stock = 3,
@@ -191,7 +192,7 @@ namespace Tests.Controllers
             {
                 ProductID = 1,
                 ProductName = "Test Product",
-                Brand = "Brand A",
+                BrandID = 1,
                 Description = "Description",
                 Price = 100,
                 Stock = 50,
@@ -241,7 +242,7 @@ namespace Tests.Controllers
             {
                 ProductID = 1,
                 ProductName = "Test Product",
-                Brand = "Brand A",
+                BrandID = 1,
                 Description = "Description",
                 Price = 100,
                 Stock = 50,
@@ -274,7 +275,7 @@ namespace Tests.Controllers
             {
                 ProductID = 1,
                 ProductName = "Active Low Stock",
-                Brand = "Brand A",
+                BrandID = 1,
                 Description = "Description",
                 Price = 100,
                 Stock = 5,
@@ -288,7 +289,7 @@ namespace Tests.Controllers
             {
                 ProductID = 2,
                 ProductName = "Inactive Low Stock",
-                Brand = "Brand B",
+                BrandID = 1,
                 Description = "Description",
                 Price = 200,
                 Stock = 3,

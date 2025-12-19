@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { api, Brand } from '../lib/api';
+import { api, type Brand } from '../lib/api';
 
 const FilterBar = () => {
   const { t } = useTranslation();

@@ -437,13 +437,16 @@ namespace Backend.Controllers
         }
 
         // DELETE: api/categories/{id}/permanent
-        // Kategorisi ve tüm ilişkileri sil (Çok dikkatli kullan!)
+        // ⚠️ DANGEROUS: Kategorisi ve tüm ilişkileri sil (Hard Delete - Sadece Admin)
+        // ⚠️ Bu işlem GERİ ALINAMAZ! Kategori, alt kategoriler ve ürünler silinir.
+        // ⚠️ Soft delete (normal DELETE) kullanımı ŞİDDETLE önerilir.
         [HttpDelete("{id}/permanent")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<ApiResponse<object>>> PermanentDeleteCategory(int id)
         {
             try
             {
+                _logger.LogWarning("⚠️ PERMANENT DELETE ATTEMPT: Category ID {CategoryId} - This will delete all subcategories and products!", id);
                 var category = await _context.Categories
                     .Include(c => c.SubCategories)
                     .ThenInclude(c => c.Products)

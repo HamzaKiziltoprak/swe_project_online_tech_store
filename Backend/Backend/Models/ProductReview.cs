@@ -15,7 +15,7 @@ namespace Backend.Models
         [StringLength(500)]
         public string Comment { get; set; } = null!;
 
-        public DateTime ReviewDate { get; set; } = DateTime.Now;
+        public DateTime ReviewDate { get; set; } = DateTime.UtcNow;
 
         public bool IsApproved { get; set; } = false;
 

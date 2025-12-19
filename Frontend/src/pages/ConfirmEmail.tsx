@@ -3,8 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import '../styles/ConfirmEmail.css';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7100';
-
 const ConfirmEmail = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();

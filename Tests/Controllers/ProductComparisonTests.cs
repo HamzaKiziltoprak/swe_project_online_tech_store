@@ -22,6 +22,15 @@ namespace Tests.Controllers
                 .Options;
 
             _context = new DataContext(options);
+            
+            // ===== MOCK DATA START - Testler için gerekli sahte veriler =====
+            // Bu bölüm testlerin çalışması için gereklidir
+            // Silmek isterseniz "MOCK DATA START" ile "MOCK DATA END" arasını silin
+            _context.Brands.Add(new Brand { BrandID = 1, BrandName = "Test Brand", Description = "Test Brand Description" });
+            _context.Categories.Add(new Category { CategoryID = 1, CategoryName = "Test Category" });
+            _context.SaveChanges();
+            // ===== MOCK DATA END =====
+            
             _mockLogger = new Mock<ILogger<ProductsController>>();
             _controller = new ProductsController(_context, _mockLogger.Object);
         }
@@ -37,7 +46,7 @@ namespace Tests.Controllers
             {
                 ProductID = 1,
                 ProductName = "Dell XPS 15",
-                Brand = "Dell",
+                BrandID = 1,
                 Price = 1500m,
                 Stock = 10,
                 ImageUrl = "dell.jpg",
@@ -50,7 +59,7 @@ namespace Tests.Controllers
             {
                 ProductID = 2,
                 ProductName = "HP Spectre",
-                Brand = "HP",
+                BrandID = 1,
                 Price = 1400m,
                 Stock = 5,
                 ImageUrl = "hp.jpg",
@@ -141,7 +150,7 @@ namespace Tests.Controllers
             {
                 ProductID = 1,
                 ProductName = "Product 1",
-                Brand = "Brand A",
+                BrandID = 1,
                 Price = 100m,
                 Stock = 10,
                 ImageUrl = "p1.jpg",
@@ -154,7 +163,7 @@ namespace Tests.Controllers
             {
                 ProductID = 2,
                 ProductName = "Product 2",
-                Brand = "Brand B",
+                BrandID = 1,
                 Price = 200m,
                 Stock = 5,
                 ImageUrl = "p2.jpg",
@@ -199,7 +208,7 @@ namespace Tests.Controllers
             {
                 ProductID = 1,
                 ProductName = "Monitor A",
-                Brand = "Samsung",
+                BrandID = 1,
                 Price = 300m,
                 Stock = 10,
                 ImageUrl = "monitor.jpg",
@@ -212,7 +221,7 @@ namespace Tests.Controllers
             {
                 ProductID = 2,
                 ProductName = "Monitor B",
-                Brand = "LG",
+                BrandID = 1,
                 Price = 320m,
                 Stock = 5,
                 ImageUrl = "monitor2.jpg",
@@ -225,7 +234,7 @@ namespace Tests.Controllers
             {
                 ProductID = 3,
                 ProductName = "Monitor C",
-                Brand = "Dell",
+                BrandID = 1,
                 Price = 280m,
                 Stock = 8,
                 ImageUrl = "monitor3.jpg",
@@ -271,7 +280,7 @@ namespace Tests.Controllers
             {
                 ProductID = 1,
                 ProductName = "Keyboard 1",
-                Brand = "Logitech",
+                BrandID = 1,
                 Price = 50m,
                 Stock = 20,
                 ImageUrl = "kb1.jpg",
@@ -284,7 +293,7 @@ namespace Tests.Controllers
             {
                 ProductID = 2,
                 ProductName = "Keyboard 2",
-                Brand = "Corsair",
+                BrandID = 1,
                 Price = 80m,
                 Stock = 15,
                 ImageUrl = "kb2.jpg",
@@ -319,7 +328,7 @@ namespace Tests.Controllers
             {
                 ProductID = 1,
                 ProductName = "RTX 3060",
-                Brand = "NVIDIA",
+                BrandID = 1,
                 Price = 400m,
                 Stock = 5,
                 ImageUrl = "rtx3060.jpg",
@@ -332,7 +341,7 @@ namespace Tests.Controllers
             {
                 ProductID = 2,
                 ProductName = "RTX 3070",
-                Brand = "NVIDIA", // Same brand
+                BrandID = 1,
                 Price = 600m, // Different price
                 Stock = 3,
                 ImageUrl = "rtx3070.jpg",

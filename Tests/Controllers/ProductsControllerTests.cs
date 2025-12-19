@@ -49,9 +49,9 @@ namespace Tests.Controllers
             _context.Categories.Add(cat1);
 
             // Farklı markalara ait ürünleri ekleyip arama filtresinin doğru çalışıp çalışmadığını test edeceğiz.
-            _context.Products.Add(new Product { ProductID = 1, ProductName = "iPhone 13", Brand = "Apple", Category = cat1, IsActive = true, Price = 1000, Stock = 10, Description="D", ImageUrl="I" });
-            _context.Products.Add(new Product { ProductID = 2, ProductName = "Samsung S21", Brand = "Samsung", Category = cat1, IsActive = true, Price = 900, Stock = 10, Description="D", ImageUrl="I" });
-            _context.Products.Add(new Product { ProductID = 3, ProductName = "MacBook", Brand = "Apple", Category = cat1, IsActive = true, Price = 2000, Stock = 10, Description="D", ImageUrl="I" });
+            _context.Products.Add(new Product { ProductID = 1, ProductName = "iPhone 13", BrandID = 1, Category = cat1, IsActive = true, Price = 1000, Stock = 10, Description="D", ImageUrl="I" });
+            _context.Products.Add(new Product { ProductID = 2, ProductName = "Samsung S21", BrandID = 1, Category = cat1, IsActive = true, Price = 900, Stock = 10, Description="D", ImageUrl="I" });
+            _context.Products.Add(new Product { ProductID = 3, ProductName = "MacBook", BrandID = 1, Category = cat1, IsActive = true, Price = 2000, Stock = 10, Description="D", ImageUrl="I" });
             await _context.SaveChangesAsync();
 
             // Apple içeren ürünleri filtrelemek için arama parametresi oluşturuyoruz.
@@ -79,9 +79,9 @@ namespace Tests.Controllers
             _context.Categories.Add(cat1);
 
             // Fiyat aralığı filtresinin çalışmasını test etmek için ürünler ekliyoruz.
-            _context.Products.Add(new Product { ProductID = 1, ProductName = "Cheap", Price = 50, Category = cat1, IsActive=true, Brand="B", Description="D", ImageUrl="I", Stock=1 });
-            _context.Products.Add(new Product { ProductID = 2, ProductName = "Mid", Price = 150, Category = cat1, IsActive=true, Brand="B", Description="D", ImageUrl="I", Stock=1 });
-            _context.Products.Add(new Product { ProductID = 3, ProductName = "Expensive", Price = 500, Category = cat1, IsActive=true, Brand="B", Description="D", ImageUrl="I", Stock=1 });
+            _context.Products.Add(new Product { ProductID = 1, ProductName = "Cheap", Price = 50, Category = cat1, IsActive=true, BrandID=1, Description="D", ImageUrl="I", Stock=1 });
+            _context.Products.Add(new Product { ProductID = 2, ProductName = "Mid", Price = 150, Category = cat1, IsActive=true, BrandID=1, Description="D", ImageUrl="I", Stock=1 });
+            _context.Products.Add(new Product { ProductID = 3, ProductName = "Expensive", Price = 500, Category = cat1, IsActive=true, BrandID=1, Description="D", ImageUrl="I", Stock=1 });
             await _context.SaveChangesAsync();
 
             // 100-200 aralığına uyan sadece Mid ürünü olacak.
@@ -104,7 +104,7 @@ namespace Tests.Controllers
             // Test için kategori ve hedef ürünü seedliyoruz.
             var cat = new Category { CategoryID = 1, CategoryName = "Cat" };
             _context.Categories.Add(cat);
-            var product = new Product { ProductID = 10, ProductName = "Target", Price = 100, Category = cat, Brand="B", Description="D", ImageUrl="I", Stock=1, IsActive=true };
+            var product = new Product { ProductID = 10, ProductName = "Target", Price = 100, Category = cat, BrandID=1, Description="D", ImageUrl="I", Stock=1, IsActive=true };
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
 
@@ -140,7 +140,7 @@ namespace Tests.Controllers
             var dto = new CreateProductDto
             {
                 ProductName = "New Product",
-                Brand = "New Brand",
+                BrandID = 1,
                 Description = "Desc",
                 Price = 99.99m,
                 Stock = 50,
@@ -167,7 +167,7 @@ namespace Tests.Controllers
         public async Task CreateProduct_ShouldReturnBadRequest_WhenCategoryDoesNotExist()
         {
             // Var olmayan kategori ID veriyoruz.
-            var dto = new CreateProductDto { CategoryID = 99, ProductName = "Fail", Brand="B", Description="D", ImageUrl="I", Price=10, Stock=1 };
+            var dto = new CreateProductDto { CategoryID = 99, ProductName = "Fail", BrandID=1, Description="D", ImageUrl="I", Price=10, Stock=1 };
 
             var result = await _controller.CreateProduct(dto);
 
@@ -182,7 +182,7 @@ namespace Tests.Controllers
         public async Task AddProductSpecification_ShouldReturnCreated_WhenProductExists()
         {
             // Özellik ekleyeceğimiz ürünü oluşturuyoruz.
-            _context.Products.Add(new Product { ProductID = 1, ProductName = "P1", CategoryID=1, Brand="B", Description="D", ImageUrl="I", Price=10, Stock=1 });
+            _context.Products.Add(new Product { ProductID = 1, ProductName = "P1", CategoryID=1, BrandID=1, Description="D", ImageUrl="I", Price=10, Stock=1 });
             await _context.SaveChangesAsync();
 
             var specDto = new CreateProductSpecificationDto { SpecName = "Color", SpecValue = "Red" };
@@ -203,7 +203,7 @@ namespace Tests.Controllers
         public async Task DeleteProductSpecification_ShouldReturnOk_WhenSpecExists()
         {
             // Silme işlemini test etmek için önce ürün ve özellik ekliyoruz.
-            _context.Products.Add(new Product { ProductID = 1, ProductName = "P1", CategoryID=1, Brand="B", Description="D", ImageUrl="I", Price=10, Stock=1 });
+            _context.Products.Add(new Product { ProductID = 1, ProductName = "P1", CategoryID=1, BrandID=1, Description="D", ImageUrl="I", Price=10, Stock=1 });
             _context.ProductSpecifications.Add(new ProductSpecification { SpecID = 100, ProductID = 1, SpecName = "Size", SpecValue = "L" });
             await _context.SaveChangesAsync();
 
@@ -226,13 +226,13 @@ namespace Tests.Controllers
             _context.Categories.Add(cat);
             
             // Aktif ve stoğu olan ürün, listede dönmeli.
-            _context.Products.Add(new Product { ProductID = 1, ProductName = "Valid", IsActive = true, Stock = 5, Category = cat, Brand="B", Description="D", ImageUrl="I", Price=10, CreatedAt = DateTime.UtcNow });
+            _context.Products.Add(new Product { ProductID = 1, ProductName = "Valid", IsActive = true, Stock = 5, Category = cat, BrandID=1, Description="D", ImageUrl="I", Price=10, CreatedAt = DateTime.UtcNow });
             
             // Aktif olmayan ürün dönmemeli.
-            _context.Products.Add(new Product { ProductID = 2, ProductName = "Inactive", IsActive = false, Stock = 5, Category = cat, Brand="B", Description="D", ImageUrl="I", Price=10, CreatedAt = DateTime.UtcNow });
+            _context.Products.Add(new Product { ProductID = 2, ProductName = "Inactive", IsActive = false, Stock = 5, Category = cat, BrandID=1, Description="D", ImageUrl="I", Price=10, CreatedAt = DateTime.UtcNow });
             
             // Stoğu olmayan ürün dönmemeli.
-            _context.Products.Add(new Product { ProductID = 3, ProductName = "NoStock", IsActive = true, Stock = 0, Category = cat, Brand="B", Description="D", ImageUrl="I", Price=10, CreatedAt = DateTime.UtcNow });
+            _context.Products.Add(new Product { ProductID = 3, ProductName = "NoStock", IsActive = true, Stock = 0, Category = cat, BrandID=1, Description="D", ImageUrl="I", Price=10, CreatedAt = DateTime.UtcNow });
 
             await _context.SaveChangesAsync();
 

@@ -171,8 +171,8 @@ namespace Tests.Controllers
             await _userManager.AddToRoleAsync(empUser2, "Employee");
 
             // Ürün, kategori, sipariş ve diğer veriler ekleniyor
-            _context.Products.Add(new Product { ProductID = 1, ProductName = "P1", Brand = "B1", Description = "D1", ImageUrl = "I1", IsActive = true, Stock = 10, Price = 100 });
-            _context.Products.Add(new Product { ProductID = 2, ProductName = "P2", Brand = "B2", Description = "D2", ImageUrl = "I2", IsActive = false, Stock = 0, Price = 50 });
+            _context.Products.Add(new Product { ProductID = 1, ProductName = "P1", BrandID = 1, Description = "D1", ImageUrl = "I1", IsActive = true, Stock = 10, Price = 100 });
+            _context.Products.Add(new Product { ProductID = 2, ProductName = "P2", BrandID = 1, Description = "D2", ImageUrl = "I2", IsActive = false, Stock = 0, Price = 50 });
 
             _context.Categories.Add(new Category { CategoryID = 1, CategoryName = "Electronics" });
 

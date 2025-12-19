@@ -190,30 +190,29 @@ function unpackPaged<T>(data: any): PagedResult<T> {
 
 export const api = {
   async login(email: string, password: string) {
-    // Identity API endpoint uses different property names
-    const response = await apiFetch<{ 
-      accessToken?: string; 
-      access_token?: string;
-      tokenType?: string;
-      token_type?: string;
-      refreshToken?: string;
-      refresh_token?: string;
-      expiresIn?: number;
-      expires_in?: number;
-    }>('/login', {
+    const response = await apiFetch<ApiResponse<{ 
+      token: string;
+      user: {
+        id: string;
+        email: string;
+        firstName: string;
+        lastName: string;
+        address?: string;
+        createdAt: string;
+        roles: string[];
+      };
+    }>>('/api/accounts/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
     
-    // Handle both camelCase and snake_case responses from Identity API
-    const accessToken = response.accessToken || response.access_token;
-    if (!accessToken) {
+    if (!response.data?.token) {
       throw new Error('Login failed - no access token received');
     }
     
     return { 
-      accessToken,
-      refreshToken: response.refreshToken || response.refresh_token 
+      accessToken: response.data.token,
+      user: response.data.user
     };
   },
   async register(payload: { firstName: string; lastName: string; email: string; password: string }) {

@@ -58,7 +58,7 @@ namespace Tests.Controllers
             SetupHttpContextWithUser(userId);
 
             // Ürün verisini test veritabanına ekliyoruz.
-            var product = new Product { ProductID = 1, ProductName = "Laptop", Price = 1000, Stock = 10, Brand="Dell", Description="Desc", ImageUrl="img.jpg" };
+            var product = new Product { ProductID = 1, ProductName = "Laptop", Price = 1000, Stock = 10, BrandID=1, Description="Desc", ImageUrl="img.jpg" };
             _context.Products.Add(product);
 
             // Kullanıcının sepetine ürün ekliyoruz.
@@ -103,7 +103,7 @@ namespace Tests.Controllers
             SetupHttpContextWithUser(userId);
 
             // Sepete eklenecek ürün
-            var product = new Product { ProductID = 10, ProductName = "Mouse", Price = 50, Stock = 100, Brand="Logi", Description="Desc", ImageUrl="img.jpg" };
+            var product = new Product { ProductID = 10, ProductName = "Mouse", Price = 50, Stock = 100, BrandID=1, Description="Desc", ImageUrl="img.jpg" };
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
 
@@ -132,7 +132,7 @@ namespace Tests.Controllers
             var userId = 4;
             SetupHttpContextWithUser(userId);
 
-            var product = new Product { ProductID = 20, ProductName = "Keyboard", Price = 100, Stock = 50, Brand="Logi", Description="Desc", ImageUrl="img.jpg" };
+            var product = new Product { ProductID = 20, ProductName = "Keyboard", Price = 100, Stock = 50, BrandID=1, Description="Desc", ImageUrl="img.jpg" };
             _context.Products.Add(product);
 
             // Kullanıcının sepetinde ürün zaten var.
@@ -157,7 +157,7 @@ namespace Tests.Controllers
             var userId = 5;
             SetupHttpContextWithUser(userId);
 
-            var product = new Product { ProductID = 30, ProductName = "Rare Item", Price = 500, Stock = 5, Brand="Rare", Description="Desc", ImageUrl="img.jpg" };
+            var product = new Product { ProductID = 30, ProductName = "Rare Item", Price = 500, Stock = 5, BrandID=1, Description="Desc", ImageUrl="img.jpg" };
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
 
@@ -190,7 +190,7 @@ namespace Tests.Controllers
             var userId = 7;
             SetupHttpContextWithUser(userId);
 
-            var product = new Product { ProductID = 40, ProductName = "Monitor", Price = 200, Stock = 20, Brand="LG", Description="Desc", ImageUrl="img.jpg" };
+            var product = new Product { ProductID = 40, ProductName = "Monitor", Price = 200, Stock = 20, BrandID=1, Description="Desc", ImageUrl="img.jpg" };
             _context.Products.Add(product);
 
             var item = new CartItem { CartItemID = 100, UserID = userId, ProductID = 40, Count = 1 };
@@ -214,7 +214,7 @@ namespace Tests.Controllers
             var otherUserId = 9;
             SetupHttpContextWithUser(userId);
 
-            var product = new Product { ProductID = 50, ProductName = "Webcam", Price = 50, Stock = 10, Brand="Logi", Description="Desc", ImageUrl="img.jpg" };
+            var product = new Product { ProductID = 50, ProductName = "Webcam", Price = 50, Stock = 10, BrandID=1, Description="Desc", ImageUrl="img.jpg" };
             _context.Products.Add(product);
 
             _context.CartItems.Add(new CartItem { CartItemID = 200, UserID = otherUserId, ProductID = 50, Count = 1 });
