@@ -22,8 +22,10 @@ const ConfirmEmail = () => {
       }
 
       try {
+        const apiBase = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7100';
+        // Token zaten URL-encoded geldiği için tekrar encode etmiyoruz
         const response = await fetch(
-          `http://localhost:5100/api/accounts/confirm-email?userId=${userId}&token=${encodeURIComponent(token)}`,
+          `${apiBase}/api/accounts/confirm-email?userId=${userId}&token=${token}`,
           {
             method: 'POST',
             headers: {

@@ -148,7 +148,31 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
 
   const json = await response.json();
   if (!response.ok) {
-    const message = json?.message || 'Beklenmeyen bir hata oluştu';
+    // Identity API error format handling
+    // Identity API returns: { type, title, status, detail, errors }
+    // Custom API returns: { success, message, errors }
+    let message = 'Beklenmeyen bir hata oluştu';
+    
+    if (json?.detail) {
+      // Identity API format - usually contains the main error message
+      message = json.detail;
+    } else if (json?.title) {
+      // Another Identity API format
+      message = json.title;
+    } else if (json?.message) {
+      // Custom API format
+      message = json.message;
+    } else if (json?.errors) {
+      // Both formats can have errors object/array
+      if (Array.isArray(json.errors)) {
+        message = json.errors.join(', ');
+      } else if (typeof json.errors === 'object') {
+        // Identity API returns errors as { "field": ["error1", "error2"] }
+        const errorMessages = Object.values(json.errors).flat();
+        message = errorMessages.join(', ');
+      }
+    }
+    
     throw new Error(message);
   }
   return json;
@@ -166,10 +190,31 @@ function unpackPaged<T>(data: any): PagedResult<T> {
 
 export const api = {
   async login(email: string, password: string) {
-    return apiFetch<{ accessToken: string; refreshToken?: string }>('/login', {
+    // Identity API endpoint uses different property names
+    const response = await apiFetch<{ 
+      accessToken?: string; 
+      access_token?: string;
+      tokenType?: string;
+      token_type?: string;
+      refreshToken?: string;
+      refresh_token?: string;
+      expiresIn?: number;
+      expires_in?: number;
+    }>('/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
+    
+    // Handle both camelCase and snake_case responses from Identity API
+    const accessToken = response.accessToken || response.access_token;
+    if (!accessToken) {
+      throw new Error('Login failed - no access token received');
+    }
+    
+    return { 
+      accessToken,
+      refreshToken: response.refreshToken || response.refresh_token 
+    };
   },
   async register(payload: { firstName: string; lastName: string; email: string; password: string }) {
     return apiFetch<ApiResponse<null>>('/api/accounts/register', {
