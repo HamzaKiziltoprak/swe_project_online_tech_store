@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import '../styles/ConfirmEmail.css';
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7100';
+
 const ConfirmEmail = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -23,7 +25,7 @@ const ConfirmEmail = () => {
 
       try {
         const response = await fetch(
-          `http://localhost:5100/api/accounts/confirm-email?userId=${userId}&token=${encodeURIComponent(token)}`,
+          `${API_BASE}/api/accounts/confirm-email?userId=${userId}&token=${encodeURIComponent(token)}`,
           {
             method: 'POST',
             headers: {
