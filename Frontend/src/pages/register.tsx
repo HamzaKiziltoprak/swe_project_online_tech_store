@@ -20,7 +20,7 @@ const RegisterPage: React.FC = () => {
     setSuccess(null);
 
     if (password.length < 8) {
-      setError(t('password'));
+      setError(t('password_min_length'));
       return;
     }
 
@@ -36,10 +36,10 @@ const RegisterPage: React.FC = () => {
   return (
     <div className="register-page">
       <div className="register-container">
-        <h2>{t('register_heading')}</h2>
+        <h2>📝 {t('register_heading')}</h2>
         <form onSubmit={handleSubmit} className="register-form">
           <div className="form-group">
-            <label htmlFor="firstName">{t('first_name')}</label>
+            <label htmlFor="firstName">👤 {t('first_name')}</label>
             <input
               type="text"
               id="firstName"
@@ -49,7 +49,7 @@ const RegisterPage: React.FC = () => {
             />
           </div>
           <div className="form-group">
-            <label htmlFor="lastName">{t('last_name')}</label>
+            <label htmlFor="lastName">👤 {t('last_name')}</label>
             <input
               type="text"
               id="lastName"
@@ -59,7 +59,7 @@ const RegisterPage: React.FC = () => {
             />
           </div>
           <div className="form-group">
-            <label htmlFor="email">{t('email')}</label>
+            <label htmlFor="email">✉️ {t('email')}</label>
             <input
               type="email"
               id="email"
@@ -69,7 +69,7 @@ const RegisterPage: React.FC = () => {
             />
           </div>
           <div className="form-group">
-            <label htmlFor="password">{t('password')}</label>
+            <label htmlFor="password">🔒 {t('password')}</label>
             <input
               type="password"
               id="password"
@@ -79,16 +79,16 @@ const RegisterPage: React.FC = () => {
             />
           </div>
           <button type="submit" className="register-button">
-            {t('register_heading')}
+            ✅ {t('register')}
           </button>
           <div className="message-area">
-            {error && <p className="error-message">{error}</p>}
-            {success && <p className="success-message">{success}</p>}
+            {error && <p className="error-message">⚠️ {error}</p>}
+            {success && <p className="success-message">✅ {success}</p>}
           </div>
         </form>
         <div className="login-link">
           <p>
-            {t('login_heading')}? <Link to="/login">{t('login')}</Link>
+            {t('already_have_account')}? <Link to="/login">🔐 {t('login')}</Link>
           </p>
         </div>
       </div>
