@@ -43,7 +43,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 0;
+  padding: 1rem 32px;
   background: var(--header-bg-color);
   color: #fff;
   position: sticky;
@@ -51,82 +51,225 @@ body {
   z-index: 10;
   width: 100%;
   box-sizing: border-box;
+  gap: 24px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .logo {
   color: #fff;
   text-decoration: none;
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
+  letter-spacing: -0.5px;
+}
+
+nav {
+  flex: 1;
+  display: flex;
+  justify-content: center;
 }
 
 .nav-links {
   list-style: none;
   display: flex;
-  gap: 16px;
+  gap: 24px;
   margin: 0;
   padding: 0;
+  align-items: center;
+}
+
+.nav-links li {
+  display: flex;
 }
 
 .nav-links a {
   color: #cbd5e1;
   text-decoration: none;
   font-weight: 500;
+  font-size: 0.95rem;
+  transition: color 0.2s ease-in-out;
+  padding: 8px 12px;
+  border-radius: 6px;
 }
 
 .nav-links a:hover {
   color: #fff;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .header-actions {
   display: flex;
   gap: 12px;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .theme-toggle-button,
 .language-toggle-button {
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   background: transparent;
   color: #fff;
-  padding: 6px 10px;
+  padding: 8px 12px;
   border-radius: 6px;
   cursor: pointer;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.theme-toggle-button:hover,
+.language-toggle-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .user-chip {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   background: rgba(255, 255, 255, 0.1);
-  padding: 6px 10px;
+  padding: 8px 14px;
   border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.user-chip:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.user-avatar {
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-chip .link-button {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+}
+
+.user-chip .link-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .auth-links {
   display: flex;
-  gap: 8px;
+  gap: 10px;
+  align-items: center;
 }
 
 .auth-links a {
   color: #fff;
   text-decoration: none;
-  padding: 6px 10px;
+  padding: 8px 14px;
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.2);
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.auth-links a:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    flex-wrap: wrap;
+    padding: 0.75rem 16px;
+    gap: 12px;
+  }
+
+  .brand {
+    order: 1;
+    width: 100%;
+  }
+
+  nav {
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .nav-links {
+    gap: 12px;
+    overflow-x: auto;
+  }
+
+  .header-actions {
+    order: 2;
+    width: 100%;
+  }
 }
 
 .main-content {
   width: 100%;
   padding: 24px 32px;
   box-sizing: border-box;
-  max-width: 1400px; /* Constrain content width */
-  margin: 0 auto; /* Center content */
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.welcome-banner {
+  background: linear-gradient(135deg, var(--button-bg-color) 0%, rgba(37, 99, 235, 0.7) 100%);
+  color: #fff;
+  padding: 24px 28px;
+  border-radius: 12px;
+  margin-bottom: 28px;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+  animation: slideDown 0.4s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.welcome-banner h1 {
+  margin: 0 0 8px 0;
+  font-size: 1.8rem;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+}
+
+.welcome-banner p {
+  margin: 0;
+  font-size: 0.95rem;
+  opacity: 0.95;
+  line-height: 1.5;
 }
 
 .link-button {
   background: none;
   border: none;
-  color: var(--button-bg-color);
+  color: inherit;
   cursor: pointer;
+  font-weight: 500;
+  padding: 0;
+  transition: all 0.2s ease-in-out;
 }

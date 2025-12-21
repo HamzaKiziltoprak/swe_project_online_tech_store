@@ -18,7 +18,9 @@ main {
   border-radius: 12px;
   padding: 16px;
   position: sticky;
-  top: 20px;
+  top: 80px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
 }
 
 .filter-group {
@@ -28,13 +30,41 @@ main {
   margin-bottom: 16px;
 }
 
+.filter-group label {
+  font-weight: 500;
+  word-break: break-word;
+  margin: 0;
+  padding: 0;
+  display: block;
+}
+
 .brand-filter-list {
   max-height: 200px;
   overflow-y: auto;
-  padding: 0; /* Remove padding */
-  border: none; /* Remove border */
-  border-radius: 0; /* Remove border-radius */
-  margin-top: 0; /* Remove top margin */
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.brand-filter-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.brand-filter-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.brand-filter-list::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.brand-filter-list::-webkit-scrollbar-thumb:hover {
+  background: var(--text-color);
 }
 
 .filter-row {
@@ -51,18 +81,42 @@ main {
   color: var(--text-color);
   box-sizing: border-box;
   width: 100%;
+  font-family: inherit;
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: var(--button-bg-color);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
 
 .checkbox-row {
   display: flex;
-  align-items:flex-start;
-  gap: 4px; /* Reduced gap */
-  padding: 2px 0; /* Reduced vertical padding */
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  min-height: 24px;
+  width: 100%;
 }
 
-.checkbox-row input {
-  width: auto;
-  flex-shrink: 0; /* Prevent checkbox from shrinking */
+.checkbox-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  cursor: pointer;
+  margin: 0;
+}
+
+.checkbox-row label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  flex: 1;
+  word-break: break-word;
+  margin: 0;
+  padding: 0;
+  font-weight: 400;
 }
 
 .clear-button {
@@ -72,7 +126,12 @@ main {
   padding: 8px;
   border-radius: 8px;
   cursor: pointer;
-  margin-top: 10px;
+  margin-top: 16px;
+  color: var(--text-color);
+}
+
+.clear-button:hover {
+  background: var(--background-color);
 }
 
 .products-list {
@@ -129,8 +188,14 @@ main {
   box-sizing: border-box;
 }
 
+.products-list-view {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
 .products-list-view .product-card {
   grid-template-columns: 120px 1fr;
+  grid-template-rows: auto;
 }
 
 .product-card {

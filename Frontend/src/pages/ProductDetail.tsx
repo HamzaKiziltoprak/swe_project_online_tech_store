@@ -45,7 +45,7 @@ const ProductDetail = () => {
         setReviews(Array.isArray(reviewList) ? reviewList : []);
         setError(null);
       } catch (err: any) {
-        setError(err.message || t('products_title'));
+        setError(err.message || t('error_loading_product'));
       } finally {
         setLoading(false);
       }
@@ -117,34 +117,34 @@ const ProductDetail = () => {
 
   if (loading) return <p>{t('loading')}</p>;
   if (error) return <p className="error">{error}</p>;
-  if (!product) return <p>{t('products_title')}</p>;
+  if (!product) return <p>{t('product_not_found')}</p>;
 
   return (
     <div className="product-detail-page">
       <section className="product-hero">
         <img src={product.imageUrl} alt={product.productName} />
         <div className="product-info">
-          <h1>{product.productName}</h1>
-          <p className="brand">{product.brand}</p>
-          <p className="price">₺{product.price}</p>
-          <p>{product.description}</p>
+          <h1>🛍️ {product.productName}</h1>
+          <p className="brand">🏷️ {product.brand}</p>
+          <p className="price">💰 ₺{product.price}</p>
+          <p>📝 {product.description}</p>
           <div className="actions">
-            <button onClick={handleAddToCart}>{t('add_to_cart')}</button>
+            <button onClick={handleAddToCart}>🛒 {t('add_to_cart')}</button>
             <button onClick={handleFavorite}>
-              {isFavorite ? t('favorite_removed') : t('favorite')}
+              {isFavorite ? `❤️ ${t('favorite_removed')}` : `🤍 ${t('favorite')}`}
             </button>
-            {favoriteError && <small className="error">{favoriteError}</small>}
+            {favoriteError && <small className="error">⚠️ {favoriteError}</small>}
           </div>
         </div>
       </section>
 
       <section className="specs">
-        <h3>{t('specs_title')}</h3>
+        <h3>🔧 {t('specs_title')}</h3>
         <div className="spec-grid">
           {specs.map((spec) => (
             <div key={spec.specID} className="spec-item">
-              <span className="spec-name">{spec.specName}</span>
-              <span className="spec-value">{spec.specValue}</span>
+              <span className="spec-name">📌 {spec.specName}</span>
+              <span className="spec-value">➜ {spec.specValue}</span>
             </div>
           ))}
           {!specs.length && <p>-</p>}
@@ -153,27 +153,27 @@ const ProductDetail = () => {
 
       <section className="reviews">
         <div className="reviews-header">
-          <h3>{t('reviews_title')}</h3>
-          {reviews.length > 0 && <span>{reviews.length}</span>}
+          <h3>💬 {t('reviews_title')}</h3>
+          {reviews.length > 0 && <span>({reviews.length})</span>}
         </div>
         <div className="review-list">
           {(Array.isArray(reviews) ? reviews : []).map((review) => (
             <div key={review.productReviewID} className="review-card">
               <div className="review-top">
-                <strong>{review.userName}</strong>
+                <strong>👤 {review.userName}</strong>
                 <span>{'⭐'.repeat(review.rating)}</span>
               </div>
-              <p>{review.reviewText}</p>
-              <small>{new Date(review.reviewDate).toLocaleDateString()}</small>
+              <p>💭 {review.reviewText}</p>
+              <small>📅 {new Date(review.reviewDate).toLocaleDateString()}</small>
             </div>
           ))}
-          {!reviews.length && <p>{t('reviews_none')}</p>}
+          {!reviews.length && <p>✨ {t('reviews_none')}</p>}
         </div>
 
         <form className="review-form" onSubmit={submitReview}>
-          <h4>{t('review_form_title')}</h4>
+          <h4>📝 {t('review_form_title')}</h4>
           <label>
-            {t('rating_label')}
+            ⭐ {t('rating_label')}
             <input
               type="number"
               min={1}
@@ -183,26 +183,26 @@ const ProductDetail = () => {
             />
           </label>
           <label>
-            {t('comment_label')}
+            💬 {t('comment_label')}
             <textarea
               value={reviewText}
               onChange={(e) => setReviewText(e.target.value)}
               placeholder={t('comment_label')}
             />
           </label>
-          <button type="submit">{t('submit')}</button>
+          <button type="submit">✅ {t('submit')}</button>
         </form>
       </section>
 
       <section className="related">
-        <h3>{t('related_title')}</h3>
+        <h3>🔗 {t('related_title')}</h3>
         <div className="related-grid">
           {related.map((item) => (
             <Link to={`/products/${item.productID}`} key={item.productID} className="related-card">
               <img src={item.imageUrl} alt={item.productName} />
               <div>
-                <p className="name">{item.productName}</p>
-                <p className="price">₺{item.price}</p>
+                <p className="name">🛍️ {item.productName}</p>
+                <p className="price">💰 ₺{item.price}</p>
               </div>
             </Link>
           ))}

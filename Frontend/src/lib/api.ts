@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7100';
+﻿const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7100';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -18,11 +18,13 @@ export interface PagedResult<T> {
 export interface ProductSummary {
   productID: number;
   productName: string;
+  brandID?: number;
   brand: string;
   price: number;
   imageUrl: string;
   categoryName?: string;
   stock: number;
+  isActive?: boolean;
 }
 
 export interface ProductDetail extends ProductSummary {
@@ -116,6 +118,7 @@ export interface UserProfile {
   lastName: string;
   address?: string;
   roles?: string[];
+  createdAt?: string;
 }
 
 export interface Category {
@@ -146,12 +149,21 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
     headers,
   });
 
-  const json = await response.json();
+  const hasContent = response.status !== 204 && response.headers.get('Content-Length') !== '0';
+  let json: any = null;
+
+  if (hasContent) {
+    try {
+      json = await response.json();
+    } catch (error) {
+      json = null;
+    }
+  }
   if (!response.ok) {
     // Identity API error format handling
     // Identity API returns: { type, title, status, detail, errors }
     // Custom API returns: { success, message, errors }
-    let message = 'Beklenmeyen bir hata oluştu';
+    let message = 'Beklenmeyen bir hata oluÅŸtu';
     
     if (json?.detail) {
       // Identity API format - usually contains the main error message
@@ -175,7 +187,11 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
     
     throw new Error(message);
   }
-  return json;
+  if (hasContent) {
+    return json as T;
+  }
+
+  return null as T;
 }
 
 function unpackPaged<T>(data: any): PagedResult<T> {
@@ -230,7 +246,7 @@ export const api = {
   async getProfile(token: string) {
     const res = await apiFetch<ApiResponse<any>>('/api/accounts/profile', { token });
     const data = res.data;
-    if (!data) throw new Error('Kullanıcı bilgisi alınamadı');
+    if (!data) throw new Error('KullanÄ±cÄ± bilgisi alÄ±namadÄ±');
     return {
       id: data.id ?? data.Id,
       email: data.email ?? data.Email,
@@ -238,7 +254,54 @@ export const api = {
       lastName: data.lastName ?? data.LastName,
       address: data.address ?? data.Address,
       roles: data.roles ?? data.Roles ?? [],
+      createdAt: data.createdAt ?? data.CreatedAt,
     } as UserProfile;
+  },
+  async updateProfile(
+    payload: { firstName: string; lastName: string; address?: string },
+    token: string,
+  ) {
+    return apiFetch<ApiResponse<UserProfile>>('/api/accounts/profile', {
+      method: 'PUT',
+      token,
+      body: JSON.stringify(payload),
+    });
+  },
+  async changePassword(
+    payload: { currentPassword: string; newPassword: string; confirmPassword: string },
+    token: string,
+  ) {
+    return apiFetch<ApiResponse<string>>('/api/accounts/change-password', {
+      method: 'POST',
+      token,
+      body: JSON.stringify(payload),
+    });
+  },
+  async getAllUsers(token: string) {
+    const res = await apiFetch<ApiResponse<UserProfile[]>>('/api/accounts/users', { token });
+    return res.data || [];
+  },
+  async getUserById(id: number, token: string) {
+    const res = await apiFetch<ApiResponse<UserProfile>>(`/api/accounts/users/${id}`, { token });
+    return res.data;
+  },
+  async assignRole(payload: { userId: number; roleName: string }, token: string) {
+    return apiFetch<ApiResponse<string>>('/api/accounts/assign-role', {
+      method: 'POST',
+      token,
+      body: JSON.stringify(payload),
+    });
+  },
+  async removeRole(payload: { userId: number; roleName: string }, token: string) {
+    return apiFetch<ApiResponse<string>>('/api/accounts/remove-role', {
+      method: 'DELETE',
+      token,
+      body: JSON.stringify(payload),
+    });
+  },
+  async getAllRoles(token: string) {
+    const res = await apiFetch<ApiResponse<string[]>>('/api/accounts/roles', { token });
+    return res.data || [];
   },
   async getProducts(params: Record<string, string | number | boolean | undefined> = {}) {
     const query = new URLSearchParams();
@@ -250,12 +313,65 @@ export const api = {
     const res = await apiFetch<ApiResponse<PagedResult<ProductSummary>>>(
       `/api/products${qs ? `?${qs}` : ''}`,
     );
-    if (!res.data) throw new Error('Ürün listesi alınamadı');
+    if (!res.data) throw new Error('Failed to load products');
     return unpackPaged<ProductSummary>(res.data);
+  },
+  async getAllProducts(token: string, pageNumber = 1, pageSize = 100) {
+    const res = await apiFetch<ApiResponse<PagedResult<ProductSummary>>>(
+      `/api/products?PageNumber=${pageNumber}&PageSize=${pageSize}`,
+      { token },
+    );
+    if (!res.data) throw new Error('Failed to load products');
+    return unpackPaged<ProductSummary>(res.data);
+  },
+  async createProduct(
+    payload: {
+      productName: string;
+      description: string;
+      price: number;
+      stock: number;
+      categoryID: number;
+      brandID: number;
+      imageUrl: string;
+      isActive?: boolean;
+    },
+    token: string,
+  ) {
+    return apiFetch<ApiResponse<ProductDetail>>('/api/products', {
+      method: 'POST',
+      token,
+      body: JSON.stringify(payload),
+    });
+  },
+  async updateProduct(
+    id: number,
+    payload: {
+      productName: string;
+      description: string;
+      price: number;
+      stock: number;
+      categoryID: number;
+      brandID: number;
+      imageUrl: string;
+      isActive: boolean;
+    },
+    token: string,
+  ) {
+    return apiFetch<ApiResponse<ProductDetail>>(`/api/products/${id}`, {
+      method: 'PUT',
+      token,
+      body: JSON.stringify(payload),
+    });
+  },
+  async deleteProduct(id: number, token: string) {
+    return apiFetch<ApiResponse<string>>(`/api/products/${id}`, {
+      method: 'DELETE',
+      token,
+    });
   },
   async getProductDetail(id: number) {
     const res = await apiFetch<ApiResponse<ProductDetail>>(`/api/products/${id}`);
-    if (!res.data) throw new Error('Ürün detayı bulunamadı');
+    if (!res.data) throw new Error('ÃœrÃ¼n detayÄ± bulunamadÄ±');
     return res.data;
   },
   async getProductSpecifications(id: number) {
@@ -305,7 +421,7 @@ export const api = {
   },
   async getCart(token: string) {
     const res = await apiFetch<ApiResponse<CartSummary>>('/api/cart', { token });
-    if (!res.data) throw new Error('Sepet alınamadı');
+    if (!res.data) throw new Error('Sepet alÄ±namadÄ±');
     return res.data;
   },
   async addToCart(productID: number, count: number, token: string) {
@@ -341,7 +457,7 @@ export const api = {
   async getOrders(token: string) {
     const res = await apiFetch<ApiResponse<any>>('/api/orders', { token });
     const data = res.data;
-    if (!data) throw new Error('Siparişler alınamadı');
+    if (!data) throw new Error('SipariÅŸler alÄ±namadÄ±');
     return {
       items: data.orders || data.Items || [],
       totalCount: data.totalCount ?? data.TotalCount ?? 0,
@@ -352,7 +468,7 @@ export const api = {
   },
   async getAdminStats(token: string) {
     const res = await apiFetch<ApiResponse<AdminStats>>('/api/admin/stats', { token });
-    if (!res.data) throw new Error('İstatistikler alınamadı');
+    if (!res.data) throw new Error('Ä°statistikler alÄ±namadÄ±');
     return res.data;
   },
   async getCategories() {
@@ -364,3 +480,4 @@ export const api = {
     return res.data || [];
   },
 };
+

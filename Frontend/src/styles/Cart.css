@@ -87,3 +87,17 @@
 .error {
   color: red;
 }
+
+.success-message {
+  color: #10b981;
+  padding: 10px;
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: 6px;
+}
+
+.error-message {
+  color: var(--error-color);
+  padding: 10px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 6px;
+}

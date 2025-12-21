@@ -77,7 +77,7 @@ const Products = () => {
     api
       .getProducts(query)
       .then((res) => setProducts(res.items))
-      .catch((err) => setError(err.message || t('products_title')))
+      .catch((err) => setError(err.message || t('error_loading_products')))
       .finally(() => setLoading(false));
   }, [filters, t]);
 
@@ -161,9 +161,9 @@ const Products = () => {
   return (
     <div className="products-page-container">
       <aside className="filter-bar">
-        <h3>{t('filters_title')}</h3>
+        <h3>⚙️ {t('filters_title')}</h3>
         <div className="filter-group">
-          <label>{t('filter_search')}</label>
+          <label>🔍 {t('filter_search')}</label>
           <input
             type="text"
             value={filterSearch}
@@ -175,7 +175,7 @@ const Products = () => {
 
         {(filterSearch === '' || 'search arama'.includes(filterSearch)) && (
           <div className="filter-group">
-            <label>{t('search_label')}</label>
+            <label>📝 {t('search_label')}</label>
             <input
               type="text"
               value={filters.searchTerm}
@@ -186,39 +186,44 @@ const Products = () => {
           </div>
         )}
 
-        {(filterSearch === '' || 'brand marka'.includes(filterSearch)) && (
+        {(filterSearch === '' || 'brand marka'.includes(filterSearch) || brands.some(b => b.brandName.toLowerCase().includes(filterSearch.toLowerCase()))) && (
           <div className="filter-group">
-            <label>{t('brand_label')}</label>
+            <label>🏷️ {t('brand_label')}</label>
             <div className="brand-filter-list">
-              {brands.map(brand => (
-                <label key={brand.brandID} className="checkbox-row">
-                  <input
-                    type="checkbox"
-                    value={brand.brandID}
-                    checked={filters.brandIds.includes(brand.brandID)}
-                    onChange={() => handleBrandChange(brand.brandID)}
-                  />
-                  {brand.brandName}
-                </label>
-              ))}
+              {brands
+                .filter(brand => filterSearch === '' || 'brand marka'.includes(filterSearch) || brand.brandName.toLowerCase().includes(filterSearch.toLowerCase()))
+                .map(brand => (
+                  <div key={brand.brandID} className="checkbox-row">
+                    <input
+                      type="checkbox"
+                      id={`brand-${brand.brandID}`}
+                      value={brand.brandID}
+                      checked={filters.brandIds.includes(brand.brandID)}
+                      onChange={() => handleBrandChange(brand.brandID)}
+                    />
+                    <label htmlFor={`brand-${brand.brandID}`}>{brand.brandName}</label>
+                  </div>
+                ))}
             </div>
           </div>
         )}
 
-        {(filterSearch === '' || 'category kategori'.includes(filterSearch)) && (
+        {(filterSearch === '' || 'category kategori'.includes(filterSearch) || categories.some(c => c.categoryName.toLowerCase().includes(filterSearch.toLowerCase()))) && (
           <div className="filter-group">
-            <label>{t('category_label')}</label>
+            <label>📦 {t('category_label')}</label>
             <select
               value={filters.categoryId}
               onChange={(e) => handleInputChange('categoryId', e.target.value)}
               className="filter-input"
             >
               <option value="">{t('category_all')}</option>
-              {categories.map((cat) => (
-                <option key={cat.categoryID} value={cat.categoryID}>
-                  {cat.categoryName}
-                </option>
-              ))}
+              {categories
+                .filter(cat => filterSearch === '' || 'category kategori'.includes(filterSearch) || cat.categoryName.toLowerCase().includes(filterSearch.toLowerCase()))
+                .map((cat) => (
+                  <option key={cat.categoryID} value={cat.categoryID}>
+                    {cat.categoryName}
+                  </option>
+                ))}
             </select>
           </div>
         )}
@@ -226,7 +231,7 @@ const Products = () => {
         {(filterSearch === '' || 'price fiyat'.includes(filterSearch)) && (
           <div className="filter-row">
             <div className="filter-group">
-              <label>{t('price_min')}</label>
+              <label>💰 {t('price_min')}</label>
               <input
                 type="number"
                 value={filters.minPrice}
@@ -235,7 +240,7 @@ const Products = () => {
               />
             </div>
             <div className="filter-group">
-              <label>{t('price_max')}</label>
+              <label>💰 {t('price_max')}</label>
               <input
                 type="number"
                 value={filters.maxPrice}
@@ -246,29 +251,30 @@ const Products = () => {
           </div>
         )}
         {(filterSearch === '' || 'stock stok'.includes(filterSearch)) && (
-          <label className="checkbox-row">
+          <div className="checkbox-row">
             <input
               type="checkbox"
+              id="in-stock-only"
               checked={filters.inStockOnly}
               onChange={(e) => handleInputChange('inStockOnly', e.target.checked)}
             />
-            {t('in_stock_only')}
-          </label>
+            <label htmlFor="in-stock-only">📍 {t('in_stock_only')}</label>
+          </div>
         )}
         <button className="clear-button" onClick={clearFilters}>
-          {t('clear_filters')}
+          🧹 {t('clear_filters')}
         </button>
       </aside>
 
       <main className="products-list">
         <div className="view-options">
-          <h2>{`${t('products_title')} (${products.length})`}</h2>
+          <h2>🛍️ {`${t('products_title')} (${products.length})`}</h2>
           <div className="view-buttons">
             <button onClick={() => setViewMode('grid')} disabled={viewMode === 'grid'}>
-              {t('grid')}
+              ⊞ {t('grid')}
             </button>
             <button onClick={() => setViewMode('list')} disabled={viewMode === 'list'}>
-              {t('list')}
+              ≡ {t('list')}
             </button>
           </div>
         </div>
@@ -301,15 +307,15 @@ const Products = () => {
                 </div>
                 <p className="product-price">₺{product.price}</p>
                 <p className="stock">
-                  {product.stock > 0 ? t('stock_in') : t('stock_out')}
+                  {product.stock > 0 ? `✅ ${t('stock_in')}` : `❌ ${t('stock_out')}`}
                 </p>
                 <div className="product-actions">
                   <Link to={`/products/${product.productID}`} className="link-button">
-                    {t('details')}
+                    👁️ {t('details')}
                   </Link>
-                  <button onClick={() => handleAddToCart(product.productID)}>{t('add_to_cart')}</button>
+                  <button onClick={() => handleAddToCart(product.productID)}>🛒 {t('add_to_cart')}</button>
                   <button onClick={() => handleFavorite(product.productID)}>
-                    {favoriteIds.has(product.productID) ? t('favorite_removed') : t('favorite')}
+                    {favoriteIds.has(product.productID) ? `❤️ ${t('favorite_removed')}` : `🤍 ${t('favorite')}`}
                   </button>
                 </div>
               </div>

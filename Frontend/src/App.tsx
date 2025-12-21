@@ -12,12 +12,14 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import AdminPage from './pages/AdminPage';
 import ConfirmEmail from './pages/ConfirmEmail';
+import NotFound from './pages/NotFound';
 import { useAuth } from './context/AuthContext';
 
 function App() {
   const { t, i18n } = useTranslation();
   const { user, logout, token } = useAuth();
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+  const isAdmin = user?.roles?.includes('Admin');
 
   useEffect(() => {
     document.body.className = '';
@@ -32,62 +34,89 @@ function App() {
     <div className="app-shell">
       <header className="app-header">
         <div className="brand">
-          <Link to="/products" className="logo">
+          <Link to={isAdmin ? '/admin' : '/products'} className="logo">
             {t('site_name')}
           </Link>
         </div>
-        <nav>
-          <ul className="nav-links">
-            <li>
-              <Link to="/products">{t('products')}</Link>
-            </li>
-            <li>
-              <Link to="/cart">{t('cart')}</Link>
-            </li>
-            {token && (
-              <li>
-                <Link to="/account">{t('account')}</Link>
-              </li>
-            )}
-            {token && user?.roles?.includes('Admin') && (
-              <li>
-                <Link to="/admin">{t('admin')}</Link>
-              </li>
-            )}
-          </ul>
-        </nav>
+
+        {(token || !isAdmin) && (
+          <nav>
+            <ul className="nav-links">
+              {!isAdmin && (
+                <>
+                  <li>
+                    <Link to="/products">🛍️ {t('products')}</Link>
+                  </li>
+                  <li>
+                    <Link to="/cart">🛒 {t('cart')}</Link>
+                  </li>
+                </>
+              )}
+              {token && (
+                <li>
+                  <Link to="/account">👤 {t('account')}</Link>
+                </li>
+              )}
+              {isAdmin && (
+                <li>
+                  <Link to="/admin">⚙️ {t('admin')}</Link>
+                </li>
+              )}
+            </ul>
+          </nav>
+        )}
+
         <div className="header-actions">
-          <button className="theme-toggle-button" onClick={toggleTheme} aria-label={t('theme_toggle')}>
+          <button className="theme-toggle-button" onClick={toggleTheme} title={t('theme_toggle')}>
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
           <button className="language-toggle-button" onClick={toggleLanguage}>
             {t('toggle_language')}
           </button>
           {token ? (
-            <div className="user-chip">
-              <span>
-                {user?.firstName} {user?.lastName}
-              </span>
+            <div className="user-chip" title={`${user?.firstName} ${user?.lastName}`}>
+              <span className="user-avatar">👤</span>
               <button onClick={logout} className="link-button">
-                {t('logout')}
+                🚪 {t('logout')}
               </button>
             </div>
           ) : (
             <div className="auth-links">
-              <Link to="/login">{t('login')}</Link>
-              <Link to="/register">{t('register')}</Link>
+              <Link to="/login">🔐 {t('login')}</Link>
+              <Link to="/register">📝 {t('register')}</Link>
             </div>
           )}
         </div>
       </header>
 
       <main className="main-content">
+        {token && (
+          <div className="welcome-banner">
+            <h1>
+              {isAdmin 
+                ? `${t('welcome')}, ${user?.firstName}! 👋` 
+                : `${t('welcome')}, ${user?.firstName}! 🛍️`}
+            </h1>
+            <p>
+              {isAdmin 
+                ? t('welcome_admin_message')
+                : t('welcome_customer_message')}
+            </p>
+          </div>
+        )}
+
         <Routes>
-          <Route path="/" element={<Navigate to="/products" replace />} />
-          <Route path="/products" element={<Products />} />
+          <Route path="/" element={<Navigate to={isAdmin ? '/admin' : '/products'} replace />} />
+          <Route
+            path="/products"
+            element={isAdmin ? <Navigate to="/admin" replace /> : <Products />}
+          />
           <Route path="/products/:id" element={<ProductDetail />} />
           <Route element={<ProtectedRoute />}>
-            <Route path="/cart" element={<CartPage />} />
+            <Route
+              path="/cart"
+              element={isAdmin ? <Navigate to="/admin" replace /> : <CartPage />}
+            />
             <Route path="/account" element={<AccountPage />} />
           </Route>
           <Route element={<AdminRoute />}>
@@ -96,6 +125,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/confirm-email" element={<ConfirmEmail />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
     </div>

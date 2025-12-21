@@ -21,7 +21,7 @@
 }
 
 .product-info .brand {
-  color: #0ea5e9;
+  color: var(--button-bg-color);
   font-weight: 600;
 }
 
