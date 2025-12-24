@@ -167,7 +167,6 @@ const Products = () => {
 
   const clearFilters = () => {
     setFilters(defaultFilters);
-    setFilterMode('include');
   };
 
   const handleAddToCart = async (productId: number) => {
@@ -211,19 +210,13 @@ const Products = () => {
         <div className="filter-mode-toggle">
           <button
             className={filterMode === 'include' ? 'active' : ''}
-            onClick={() => {
-              setFilterMode('include');
-              setFilters(prev => ({ ...prev, excludedBrandIds: [], excludedCategoryIds: [] }));
-            }}
+            onClick={() => setFilterMode('include')}
           >
             ✓ Include
           </button>
           <button
             className={filterMode === 'exclude' ? 'active' : ''}
-            onClick={() => {
-              setFilterMode('exclude');
-              setFilters(prev => ({ ...prev, brandIds: [], categoryId: '' }));
-            }}
+            onClick={() => setFilterMode('exclude')}
           >
             ✗ Exclude
           </button>
