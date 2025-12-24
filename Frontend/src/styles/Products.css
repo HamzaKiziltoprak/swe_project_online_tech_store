@@ -21,6 +21,61 @@ main {
   top: 80px;
   max-height: calc(100vh - 100px);
   overflow-y: auto;
+  transition: all 0.3s ease;
+}
+
+/* Exclude Mode Styling */
+.filter-bar.exclude-mode {
+  border: 2px solid #dc3545;
+  background: linear-gradient(to bottom, #fff5f5, var(--card-bg-color));
+}
+
+/* Filter Mode Toggle */
+.filter-mode-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.filter-mode-toggle button {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  background: var(--card-bg-color);
+  color: var(--text-color);
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+}
+
+.filter-mode-toggle button:hover {
+  background: var(--background-color);
+}
+
+.filter-mode-toggle button.active {
+  background: var(--button-bg-color);
+  color: var(--button-text-color);
+}
+
+.filter-mode-toggle button:first-child.active {
+  background: #28a745;
+}
+
+.filter-mode-toggle button:last-child.active {
+  background: #dc3545;
+}
+
+/* Exclude Checkbox Styling */
+.exclude-checkbox {
+  accent-color: #dc3545 !important;
+}
+
+.filter-bar.exclude-mode input[type="checkbox"]:checked {
+  accent-color: #dc3545;
 }
 
 .filter-group {
@@ -173,6 +228,15 @@ main {
   padding: 6px 10px;
   border-radius: 999px;
   font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.chip-excluded {
+  background: #dc3545;
+  color: white;
+  border-color: #dc3545;
+  text-decoration: line-through;
+  font-weight: 500;
 }
 
 .products-grid {

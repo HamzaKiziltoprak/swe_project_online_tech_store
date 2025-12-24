@@ -112,8 +112,11 @@ namespace Backend.DTOs
         // Arama terimi (ürün adı veya açıklamada ara)
         public string? SearchTerm { get; set; }
 
-        // Marka filtresi
+        // Marka filtresi (tekil - geriye dönük uyumluluk için)
         public int? BrandID { get; set; }
+        
+        // Marka filtreleri (çoğul - virgülle ayrılmış: "1,2,3")
+        public string? BrandIds { get; set; }
 
         // Kategori filtresi
         public int? CategoryId { get; set; }

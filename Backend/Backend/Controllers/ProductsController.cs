@@ -48,6 +48,21 @@ namespace Backend.Controllers
                 {
                     query = query.Where(p => p.BrandID == filterParams.BrandID.Value);
                 }
+                // Çoklu marka filtresi (BrandIds)
+                else if (!string.IsNullOrWhiteSpace(filterParams.BrandIds))
+                {
+                    var brandIds = filterParams.BrandIds
+                        .Split(',')
+                        .Select(id => int.TryParse(id.Trim(), out var parsedId) ? parsedId : -1)
+                        .Where(id => id > 0)
+                        .ToList();
+                    
+                    if (brandIds.Count > 0)
+                    {
+                        query = query.Where(p => brandIds.Contains(p.BrandID));
+                        _logger.LogInformation($"Filtering by brand IDs: {string.Join(", ", brandIds)}");
+                    }
+                }
 
                 // 3. Kategori filtresi
                 if (filterParams.CategoryId.HasValue)
@@ -73,6 +88,22 @@ namespace Backend.Controllers
                 }
 
                 // 6. EXCLUDE FILTERS - "Bu özellikleri istemiyor" filtreleri
+                
+                // Hariç tutulacak markalar
+                if (!string.IsNullOrWhiteSpace(filterParams.ExcludeBrands))
+                {
+                    var excludedBrandIds = filterParams.ExcludeBrands
+                        .Split(',')
+                        .Select(id => int.TryParse(id.Trim(), out var parsedId) ? parsedId : -1)
+                        .Where(id => id > 0)
+                        .ToList();
+                    
+                    if (excludedBrandIds.Count > 0)
+                    {
+                        query = query.Where(p => !excludedBrandIds.Contains(p.BrandID));
+                        _logger.LogInformation($"Excluded brand IDs: {string.Join(", ", excludedBrandIds)}");
+                    }
+                }
                 
                 // Hariç tutulacak kategoriler
                 if (!string.IsNullOrWhiteSpace(filterParams.ExcludeCategoryIds))

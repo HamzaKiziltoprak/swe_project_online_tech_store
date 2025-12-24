@@ -13,6 +13,8 @@ interface FiltersState {
   minPrice: string;
   maxPrice: string;
   inStockOnly: boolean;
+  excludedBrandIds: number[];
+  excludedCategoryIds: number[];
 }
 
 const defaultFilters: FiltersState = {
@@ -22,6 +24,8 @@ const defaultFilters: FiltersState = {
   minPrice: '',
   maxPrice: '',
   inStockOnly: false,
+  excludedBrandIds: [],
+  excludedCategoryIds: [],
 };
 
 const Products = () => {
@@ -37,6 +41,7 @@ const Products = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [filterSearch, setFilterSearch] = useState<string>('');
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
+  const [filterMode, setFilterMode] = useState<'include' | 'exclude'>('include');
 
   const flattenCategories = (cats: Category[], depth = 0, list: Category[] = []) => {
     cats.forEach((cat) => {
@@ -74,6 +79,13 @@ const Products = () => {
     if (filters.brandIds.length > 0) {
       query.BrandIds = filters.brandIds.join(',');
     }
+    // Exclude filters - backend already supports these
+    if (filters.excludedCategoryIds.length > 0) {
+      query.ExcludeCategoryIds = filters.excludedCategoryIds.join(',');
+    }
+    if (filters.excludedBrandIds.length > 0) {
+      query.ExcludeBrands = filters.excludedBrandIds.join(',');
+    }
     api
       .getProducts(query)
       .then((res) => setProducts(res.items))
@@ -93,21 +105,34 @@ const Products = () => {
   }, [token]);
 
   const activeFilters = useMemo(() => {
-    const chips: string[] = [];
-    if (filters.searchTerm) chips.push(`${t('search_label')}: ${filters.searchTerm}`);
+    const chips: Array<{ label: string; type: 'include' | 'exclude' }> = [];
+    if (filters.searchTerm) chips.push({ label: `${t('search_label')}: ${filters.searchTerm}`, type: 'include' });
     if (filters.brandIds.length > 0) {
       const brandNames = filters.brandIds.map(id => brands.find(b => b.brandID === id)?.brandName).filter(Boolean);
-      chips.push(`${t('brand_label')}: ${brandNames.join(', ')}`);
+      chips.push({ label: `${t('brand_label')}: ${brandNames.join(', ')}`, type: 'include' });
     }
     if (filters.categoryId) {
       const categoryName =
         categories.find((c) => String(c.categoryID) === filters.categoryId)?.categoryName ||
         t('category_label');
-      chips.push(categoryName);
+      chips.push({ label: categoryName, type: 'include' });
     }
-    if (filters.minPrice) chips.push(`${t('price_min')} ${filters.minPrice}`);
-    if (filters.maxPrice) chips.push(`${t('price_max')} ${filters.maxPrice}`);
-    if (filters.inStockOnly) chips.push(t('stock_in'));
+    if (filters.minPrice) chips.push({ label: `${t('price_min')} ${filters.minPrice}`, type: 'include' });
+    if (filters.maxPrice) chips.push({ label: `${t('price_max')} ${filters.maxPrice}`, type: 'include' });
+    if (filters.inStockOnly) chips.push({ label: t('stock_in'), type: 'include' });
+
+    // Excluded filters
+    if (filters.excludedBrandIds.length > 0) {
+      const brandNames = filters.excludedBrandIds.map(id => brands.find(b => b.brandID === id)?.brandName).filter(Boolean);
+      chips.push({ label: `NOT ${t('brand_label')}: ${brandNames.join(', ')}`, type: 'exclude' });
+    }
+    if (filters.excludedCategoryIds.length > 0) {
+      const categoryNames = filters.excludedCategoryIds.map(id =>
+        categories.find(c => c.categoryID === id)?.categoryName.replace(/— /g, '')
+      ).filter(Boolean);
+      chips.push({ label: `NOT ${t('category_label')}: ${categoryNames.join(', ')}`, type: 'exclude' });
+    }
+
     return chips;
   }, [filters, categories, brands, t]);
 
@@ -117,14 +142,33 @@ const Products = () => {
 
   const handleBrandChange = (brandId: number) => {
     setFilters(prev => {
-      const newBrandIds = prev.brandIds.includes(brandId)
-        ? prev.brandIds.filter(id => id !== brandId)
-        : [...prev.brandIds, brandId];
-      return { ...prev, brandIds: newBrandIds };
+      if (filterMode === 'include') {
+        const newBrandIds = prev.brandIds.includes(brandId)
+          ? prev.brandIds.filter(id => id !== brandId)
+          : [...prev.brandIds, brandId];
+        return { ...prev, brandIds: newBrandIds };
+      } else {
+        const newExcludedBrandIds = prev.excludedBrandIds.includes(brandId)
+          ? prev.excludedBrandIds.filter(id => id !== brandId)
+          : [...prev.excludedBrandIds, brandId];
+        return { ...prev, excludedBrandIds: newExcludedBrandIds };
+      }
     });
   };
 
-  const clearFilters = () => setFilters(defaultFilters);
+  const handleCategoryExcludeChange = (categoryId: number) => {
+    setFilters(prev => {
+      const newExcludedCategoryIds = prev.excludedCategoryIds.includes(categoryId)
+        ? prev.excludedCategoryIds.filter(id => id !== categoryId)
+        : [...prev.excludedCategoryIds, categoryId];
+      return { ...prev, excludedCategoryIds: newExcludedCategoryIds };
+    });
+  };
+
+  const clearFilters = () => {
+    setFilters(defaultFilters);
+    setFilterMode('include');
+  };
 
   const handleAddToCart = async (productId: number) => {
     if (!token) {
@@ -160,8 +204,31 @@ const Products = () => {
 
   return (
     <div className="products-page-container">
-      <aside className="filter-bar">
+      <aside className={`filter-bar ${filterMode === 'exclude' ? 'exclude-mode' : ''}`}>
         <h3>⚙️ {t('filters_title')}</h3>
+
+        {/* Filter Mode Toggle */}
+        <div className="filter-mode-toggle">
+          <button
+            className={filterMode === 'include' ? 'active' : ''}
+            onClick={() => {
+              setFilterMode('include');
+              setFilters(prev => ({ ...prev, excludedBrandIds: [], excludedCategoryIds: [] }));
+            }}
+          >
+            ✓ Include
+          </button>
+          <button
+            className={filterMode === 'exclude' ? 'active' : ''}
+            onClick={() => {
+              setFilterMode('exclude');
+              setFilters(prev => ({ ...prev, brandIds: [], categoryId: '' }));
+            }}
+          >
+            ✗ Exclude
+          </button>
+        </div>
+
         <div className="filter-group">
           <label>🔍 {t('filter_search')}</label>
           <input
@@ -198,8 +265,11 @@ const Products = () => {
                       type="checkbox"
                       id={`brand-${brand.brandID}`}
                       value={brand.brandID}
-                      checked={filters.brandIds.includes(brand.brandID)}
+                      checked={filterMode === 'include'
+                        ? filters.brandIds.includes(brand.brandID)
+                        : filters.excludedBrandIds.includes(brand.brandID)}
                       onChange={() => handleBrandChange(brand.brandID)}
+                      className={filterMode === 'exclude' ? 'exclude-checkbox' : ''}
                     />
                     <label htmlFor={`brand-${brand.brandID}`}>{brand.brandName}</label>
                   </div>
@@ -211,20 +281,40 @@ const Products = () => {
         {(filterSearch === '' || 'category kategori'.includes(filterSearch) || categories.some(c => c.categoryName.toLowerCase().includes(filterSearch.toLowerCase()))) && (
           <div className="filter-group">
             <label>📦 {t('category_label')}</label>
-            <select
-              value={filters.categoryId}
-              onChange={(e) => handleInputChange('categoryId', e.target.value)}
-              className="filter-input"
-            >
-              <option value="">{t('category_all')}</option>
-              {categories
-                .filter(cat => filterSearch === '' || 'category kategori'.includes(filterSearch) || cat.categoryName.toLowerCase().includes(filterSearch.toLowerCase()))
-                .map((cat) => (
-                  <option key={cat.categoryID} value={cat.categoryID}>
-                    {cat.categoryName}
-                  </option>
-                ))}
-            </select>
+            {filterMode === 'include' ? (
+              <select
+                value={filters.categoryId}
+                onChange={(e) => handleInputChange('categoryId', e.target.value)}
+                className="filter-input"
+              >
+                <option value="">{t('category_all')}</option>
+                {categories
+                  .filter(cat => filterSearch === '' || 'category kategori'.includes(filterSearch) || cat.categoryName.toLowerCase().includes(filterSearch.toLowerCase()))
+                  .map((cat) => (
+                    <option key={cat.categoryID} value={cat.categoryID}>
+                      {cat.categoryName}
+                    </option>
+                  ))}
+              </select>
+            ) : (
+              <div className="brand-filter-list">
+                {categories
+                  .filter(cat => filterSearch === '' || 'category kategori'.includes(filterSearch) || cat.categoryName.toLowerCase().includes(filterSearch.toLowerCase()))
+                  .map(cat => (
+                    <div key={cat.categoryID} className="checkbox-row">
+                      <input
+                        type="checkbox"
+                        id={`cat-${cat.categoryID}`}
+                        value={cat.categoryID}
+                        checked={filters.excludedCategoryIds.includes(cat.categoryID)}
+                        onChange={() => handleCategoryExcludeChange(cat.categoryID)}
+                        className="exclude-checkbox"
+                      />
+                      <label htmlFor={`cat-${cat.categoryID}`}>{cat.categoryName.replace(/— /g, '')}</label>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -280,9 +370,9 @@ const Products = () => {
         </div>
 
         <div className="chips">
-          {activeFilters.map((chip) => (
-            <span key={chip} className="chip">
-              {chip}
+          {activeFilters.map((chip, index) => (
+            <span key={`${chip.type}-${chip.label}-${index}`} className={`chip ${chip.type === 'exclude' ? 'chip-excluded' : ''}`}>
+              {chip.label}
             </span>
           ))}
         </div>
