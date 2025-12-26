@@ -14,6 +14,8 @@ import AdminPage from './pages/AdminPage';
 import ConfirmEmail from './pages/ConfirmEmail';
 import NotFound from './pages/NotFound';
 import { useAuth } from './context/AuthContext';
+import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer } from 'react-toastify';
 
 function App() {
   const { t, i18n } = useTranslation();
@@ -93,12 +95,12 @@ function App() {
         {token && (
           <div className="welcome-banner">
             <h1>
-              {isAdmin 
-                ? `${t('welcome')}, ${user?.firstName}! 👋` 
+              {isAdmin
+                ? `${t('welcome')}, ${user?.firstName}! 👋`
                 : `${t('welcome')}, ${user?.firstName}! 🛍️`}
             </h1>
             <p>
-              {isAdmin 
+              {isAdmin
                 ? t('welcome_admin_message')
                 : t('welcome_customer_message')}
             </p>
@@ -128,6 +130,18 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme={theme === 'dark' ? 'dark' : 'light'}
+      />
     </div>
   );
 }

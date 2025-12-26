@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify';
 import { api } from '../lib/api';
 import type { CartItem, CartSummary } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
@@ -12,15 +13,13 @@ const CartPage = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [address, setAddress] = useState<string>('');
-  const [message, setMessage] = useState<string | null>(null);
-  const [itemLoading, setItemLoading] = useState<number | null>(null); // To track loading for individual items
+  const [itemLoading, setItemLoading] = useState<number | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState<boolean>(false);
 
   const loadCart = async () => {
     if (!token) return;
     setLoading(true);
     setError(null);
-    setMessage(null);
     try {
       const fetchedCart = await api.getCart(token);
       setCart(fetchedCart);
@@ -39,13 +38,12 @@ const CartPage = () => {
     if (!token || itemLoading === item.cartItemID) return;
     setItemLoading(item.cartItemID);
     setError(null);
-    setMessage(null);
     try {
       await api.updateCartItem(item.cartItemID, count, token);
-      setMessage(t('cart_item_updated'));
+      toast.success(t('cart_item_updated'));
       await loadCart();
     } catch (err: any) {
-      setError(err.message || t('cart_update_error'));
+      toast.error(err.message || t('cart_update_error'));
     } finally {
       setItemLoading(null);
     }
@@ -55,13 +53,12 @@ const CartPage = () => {
     if (!token || itemLoading === item.cartItemID) return;
     setItemLoading(item.cartItemID);
     setError(null);
-    setMessage(null);
     try {
       await api.removeCartItem(item.cartItemID, token);
-      setMessage(t('cart_item_removed'));
+      toast.success(t('cart_item_removed'));
       await loadCart();
     } catch (err: any) {
-      setError(err.message || t('cart_remove_error'));
+      toast.error(err.message || t('cart_remove_error'));
     } finally {
       setItemLoading(null);
     }
@@ -71,13 +68,12 @@ const CartPage = () => {
     if (!token || loading) return;
     setLoading(true);
     setError(null);
-    setMessage(null);
     try {
       await api.clearCart(token);
-      setMessage(t('cart_cleared'));
+      toast.success(t('cart_cleared'));
       await loadCart();
     } catch (err: any) {
-      setError(err.message || t('cart_clear_error'));
+      toast.error(err.message || t('cart_clear_error'));
     } finally {
       setLoading(false);
     }
@@ -85,16 +81,21 @@ const CartPage = () => {
 
   const checkout = async () => {
     if (!token || !cart || checkoutLoading) return;
+
+    if (!address || address.trim() === '') {
+      toast.warning(t('address_required'));
+      return;
+    }
+
     setCheckoutLoading(true);
     setError(null);
-    setMessage(null);
     try {
-      const res = await api.createOrder(address || t('address_default'), token);
-      setMessage(`${t('order_placed_success')} #${res.data?.orderID ?? ''}`);
+      const res = await api.createOrder(address, token);
+      toast.success(`${t('order_placed_success')} #${res.data?.orderID ?? ''}`);
       setAddress('');
-      await loadCart(); // Refresh cart after checkout
+      await loadCart();
     } catch (err: any) {
-      setError(err.message || t('checkout_error'));
+      toast.error(err.message || t('checkout_error'));
     } finally {
       setCheckoutLoading(false);
     }
@@ -107,7 +108,6 @@ const CartPage = () => {
   return (
     <div className="cart-page">
       <h2>🛒 {t('cart_title')}</h2>
-      {message && <p className="success-message">{message}</p>}
       {error && <p className="error-message">{error}</p>}
       <div className="cart-list">
         {cart.items.map((item) => (
@@ -161,7 +161,7 @@ const CartPage = () => {
           <button onClick={clearCart} disabled={loading}>
             🧹 {t('clear_cart')}
           </button>
-          <button onClick={checkout} disabled={checkoutLoading || !address}>
+          <button onClick={checkout} disabled={checkoutLoading}>
             ✅ {t('checkout')} {checkoutLoading && <small>⏳</small>}
           </button>
         </div>

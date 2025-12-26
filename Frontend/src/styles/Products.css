@@ -339,3 +339,13 @@ main {
 .error {
   color: var(--error-color);
 }
+
+.favorite-btn-active {
+  background: #ff4757 !important;
+  color: white !important;
+  border-color: #ff4757 !important;
+}
+
+.favorite-btn-active:hover {
+  background: #ee5a6f !important;
+}

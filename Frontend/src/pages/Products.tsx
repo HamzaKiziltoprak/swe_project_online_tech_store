@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify';
 import { api } from '../lib/api';
 import type { Category, ProductSummary, Brand } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
@@ -176,9 +177,9 @@ const Products = () => {
     }
     try {
       await api.addToCart(productId, 1, token);
-      alert(t('add_to_cart'));
+      toast.success(t('added_to_cart'));
     } catch (err: any) {
-      alert(err.message || t('add_to_cart'));
+      toast.error(err.message || t('add_to_cart'));
     }
   };
 
@@ -188,16 +189,21 @@ const Products = () => {
       return;
     }
     try {
-      const res = await api.toggleFavorite(productId, token);
+      const isFavorited = favoriteIds.has(productId);
+      await api.toggleFavorite(productId, token);
       setFavoriteIds((prev) => {
         const next = new Set(prev);
         if (next.has(productId)) next.delete(productId);
         else next.add(productId);
         return next;
       });
-      alert(res.message || t('favorite'));
+      if (isFavorited) {
+        toast.success(t('favorite_removed'));
+      } else {
+        toast.success(t('favorite_added'));
+      }
     } catch (err: any) {
-      alert(err.message || t('favorite_error'));
+      toast.error(err.message || t('favorite_error'));
     }
   };
 
@@ -397,8 +403,11 @@ const Products = () => {
                     👁️ {t('details')}
                   </Link>
                   <button onClick={() => handleAddToCart(product.productID)}>🛒 {t('add_to_cart')}</button>
-                  <button onClick={() => handleFavorite(product.productID)}>
-                    {favoriteIds.has(product.productID) ? `❤️ ${t('favorite_removed')}` : `🤍 ${t('favorite')}`}
+                  <button
+                    onClick={() => handleFavorite(product.productID)}
+                    className={favoriteIds.has(product.productID) ? 'favorite-btn-active' : ''}
+                  >
+                    {favoriteIds.has(product.productID) ? '❤️' : `🤍 ${t('favorite')}`}
                   </button>
                 </div>
               </div>

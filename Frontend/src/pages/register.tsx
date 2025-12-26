@@ -11,6 +11,7 @@ const RegisterPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showPasswordHint, setShowPasswordHint] = useState(false);
   const navigate = useNavigate();
   const { t } = useTranslation();
 
@@ -70,13 +71,32 @@ const RegisterPage: React.FC = () => {
           </div>
           <div className="form-group">
             <label htmlFor="password">🔒 {t('password')}</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <div className="password-input-wrapper">
+              <input
+                type="password"
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onFocus={() => setShowPasswordHint(true)}
+                onBlur={() => setShowPasswordHint(false)}
+                required
+                className={error && password.length < 8 ? 'input-error' : ''}
+              />
+              <button
+                type="button"
+                className="password-hint-icon"
+                onMouseEnter={() => setShowPasswordHint(true)}
+                onMouseLeave={() => setShowPasswordHint(false)}
+                onClick={() => setShowPasswordHint(!showPasswordHint)}
+              >
+                ?
+              </button>
+              {showPasswordHint && (
+                <div className="password-hint-tooltip">
+                  {t('password_requirements')}
+                </div>
+              )}
+            </div>
           </div>
           <button type="submit" className="register-button">
             ✅ {t('register')}
