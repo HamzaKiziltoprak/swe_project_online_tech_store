@@ -12,13 +12,21 @@
 
 .cart-item {
   display: grid;
-  grid-template-columns: 1.5fr 1fr 1fr auto;
+  grid-template-columns: auto 1.5fr 1fr 1fr auto;
   gap: 12px;
   align-items: center;
   background: var(--card-bg-color);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 12px;
+}
+
+.cart-item-image {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
 }
 
 .cart-item .name {

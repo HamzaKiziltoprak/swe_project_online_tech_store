@@ -282,123 +282,140 @@ const AdminPage: React.FC = () => {
           {productError && <p className="error">⚠️ {productError}</p>}
 
           {showProductForm && (
-            <div className="product-form-container">
-              <form className="product-form" onSubmit={handleProductSubmit}>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>{t('product_name')} *</label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.productName}
-                      onChange={(e) =>
-                        setFormData({ ...formData, productName: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t('price')} *</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      required
-                      value={formData.price}
-                      onChange={(e) =>
-                        setFormData({ ...formData, price: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>{t('stock')} *</label>
-                    <input
-                      type="number"
-                      required
-                      value={formData.stock}
-                      onChange={(e) =>
-                        setFormData({ ...formData, stock: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>{t('category')} *</label>
-                    <select
-                      required
-                      value={formData.categoryID}
-                      onChange={(e) =>
-                        setFormData({ ...formData, categoryID: e.target.value })
-                      }
-                    >
-                      <option value="">{t('select_category')}</option>
-                      {categories.map((cat) => (
-                        <option key={cat.categoryID} value={cat.categoryID}>
-                          {cat.categoryName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>{t('brand')} *</label>
-                    <select
-                      required
-                      value={formData.brandID}
-                      onChange={(e) =>
-                        setFormData({ ...formData, brandID: e.target.value })
-                      }
-                    >
-                      <option value="">{t('select_brand')}</option>
-                      {brands.map((brand) => (
-                        <option key={brand.brandID} value={brand.brandID}>
-                          {brand.brandName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>{t('image_url')}</label>
-                    <input
-                      type="url"
-                      value={formData.imageUrl}
-                      onChange={(e) =>
-                        setFormData({ ...formData, imageUrl: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>{t('description')} *</label>
-                  <textarea
-                    required
-                    rows={4}
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                  />
-                </div>
-
-                <div className="form-actions">
-                  <button type="submit" className="btn-primary">
-                    {editingProductId ? t('update') : t('create')}
-                  </button>
+            <div className="modal-backdrop" onClick={() => {
+              setShowProductForm(false);
+              setEditingProductId(null);
+            }}>
+              <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h3>{editingProductId ? `✏️ ${t('edit')} ${t('product_name')}` : `➕ ${t('add_new_product')}`}</h3>
                   <button
-                    type="button"
-                    className="btn-secondary"
+                    className="modal-close-btn"
                     onClick={() => {
                       setShowProductForm(false);
                       setEditingProductId(null);
                     }}
                   >
-                    {t('cancel')}
+                    ✕
                   </button>
                 </div>
-              </form>
+                <form className="product-form" onSubmit={handleProductSubmit}>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>{t('product_name')} *</label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.productName}
+                        onChange={(e) =>
+                          setFormData({ ...formData, productName: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>{t('price')} *</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        required
+                        value={formData.price}
+                        onChange={(e) =>
+                          setFormData({ ...formData, price: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>{t('stock')} *</label>
+                      <input
+                        type="number"
+                        required
+                        value={formData.stock}
+                        onChange={(e) =>
+                          setFormData({ ...formData, stock: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>{t('category')} *</label>
+                      <select
+                        required
+                        value={formData.categoryID}
+                        onChange={(e) =>
+                          setFormData({ ...formData, categoryID: e.target.value })
+                        }
+                      >
+                        <option value="">{t('select_category')}</option>
+                        {categories.map((cat) => (
+                          <option key={cat.categoryID} value={cat.categoryID}>
+                            {cat.categoryName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>{t('brand')} *</label>
+                      <select
+                        required
+                        value={formData.brandID}
+                        onChange={(e) =>
+                          setFormData({ ...formData, brandID: e.target.value })
+                        }
+                      >
+                        <option value="">{t('select_brand')}</option>
+                        {brands.map((brand) => (
+                          <option key={brand.brandID} value={brand.brandID}>
+                            {brand.brandName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>{t('image_url')}</label>
+                      <input
+                        type="url"
+                        value={formData.imageUrl}
+                        onChange={(e) =>
+                          setFormData({ ...formData, imageUrl: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>{t('description')} *</label>
+                    <textarea
+                      required
+                      rows={4}
+                      value={formData.description}
+                      onChange={(e) =>
+                        setFormData({ ...formData, description: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  <div className="form-actions">
+                    <button type="submit" className="btn-primary">
+                      {editingProductId ? t('update') : t('create')}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => {
+                        setShowProductForm(false);
+                        setEditingProductId(null);
+                      }}
+                    >
+                      {t('cancel')}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
 
@@ -425,9 +442,8 @@ const AdminPage: React.FC = () => {
                       <td>💰 ₺{product.price.toFixed(2)}</td>
                       <td>
                         <span
-                          className={`stock-badge ${
-                            product.stock > 0 ? 'in-stock' : 'out-of-stock'
-                          }`}
+                          className={`stock-badge ${product.stock > 0 ? 'in-stock' : 'out-of-stock'
+                            }`}
                         >
                           {product.stock > 0 ? '✅' : '❌'} {product.stock}
                         </span>

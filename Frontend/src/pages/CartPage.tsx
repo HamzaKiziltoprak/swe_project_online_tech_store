@@ -112,6 +112,11 @@ const CartPage = () => {
       <div className="cart-list">
         {cart.items.map((item) => (
           <div key={item.cartItemID} className="cart-item">
+            <img
+              src={item.productImageUrl || 'https://via.placeholder.com/60'}
+              alt={item.productName}
+              className="cart-item-image"
+            />
             <div>
               <p className="name">🏷️ {item.productName}</p>
               <p className="price">💰 ₺{item.price}</p>

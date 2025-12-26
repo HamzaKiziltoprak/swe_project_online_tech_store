@@ -398,6 +398,9 @@ const Products = () => {
                 <p className="stock">
                   {product.stock > 0 ? `✅ ${t('stock_in')}` : `❌ ${t('stock_out')}`}
                 </p>
+                <p className="product-micro-copy">
+                  {product.stock > 0 ? '🚀 Hızlı Teslimat' : '📦 Stok Bildirimi'}
+                </p>
                 <div className="product-actions">
                   <Link to={`/products/${product.productID}`} className="link-button">
                     👁️ {t('details')}
