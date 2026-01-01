@@ -409,8 +409,9 @@ const Products = () => {
                   <button
                     onClick={() => handleFavorite(product.productID)}
                     className={favoriteIds.has(product.productID) ? 'favorite-btn-active' : ''}
+                    aria-label={favoriteIds.has(product.productID) ? 'Remove from favorites' : 'Add to favorites'}
                   >
-                    {favoriteIds.has(product.productID) ? '❤️' : `🤍 ${t('favorite')}`}
+                    {favoriteIds.has(product.productID) ? '❤️' : '🤍'}
                   </button>
                 </div>
               </div>

@@ -16,6 +16,7 @@ import NotFound from './pages/NotFound';
 import { useAuth } from './context/AuthContext';
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   const { t, i18n } = useTranslation();
@@ -142,6 +143,7 @@ function App() {
         pauseOnHover
         theme={theme === 'dark' ? 'dark' : 'light'}
       />
+      <Toaster />
     </div>
   );
 }

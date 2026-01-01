@@ -11,7 +11,8 @@
 
 .login-container {
     padding: 2rem;
-    background: var(--header-bg-color); /* Using header bg for a slight contrast */
+    background: var(--card-bg-color);
+    /* Changed for light mode visibility */
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     border: 1px solid var(--border-color);
@@ -45,7 +46,8 @@
     padding: 0.75rem;
     border: 1px solid var(--border-color);
     border-radius: 4px;
-    box-sizing: border-box; /* Important for padding */
+    box-sizing: border-box;
+    /* Important for padding */
     background-color: var(--background-color);
     color: var(--text-color);
     transition: background-color 0.3s, color 0.3s, border-color 0.3s;
@@ -103,7 +105,8 @@
 
 .password-input-container input {
     width: 100%;
-    padding-right: 3rem; /* Make space for the toggle button */
+    padding-right: 3rem;
+    /* Make space for the toggle button */
 }
 
 .toggle-password-visibility {
@@ -111,7 +114,8 @@
     right: 0.5rem;
     background: none;
     border: none;
-    color: var(--text-color); /* Adjust color to fit theme */
+    color: var(--text-color);
+    /* Adjust color to fit theme */
     cursor: pointer;
     font-size: 0.875rem;
     padding: 0.25rem 0.5rem;
@@ -120,7 +124,8 @@
 }
 
 .toggle-password-visibility:hover {
-    background-color: rgba(0, 0, 0, 0.1); /* Subtle hover effect */
+    background-color: rgba(0, 0, 0, 0.1);
+    /* Subtle hover effect */
 }
 
 /* Enhanced error message for email verification */
