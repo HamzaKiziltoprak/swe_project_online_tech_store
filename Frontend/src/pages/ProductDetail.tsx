@@ -139,7 +139,7 @@ const ProductDetail = () => {
       setReviews(Array.isArray(updated) ? updated : []);
       setReviewText('');
       setRating(5);
-      showSuccess('Review submitted successfully!');
+      showInfo(t('review_pending_approval') || 'Your review has been submitted and will be published after admin approval.');
     } catch (err: any) {
       showError(err.message || 'Failed to submit review');
     }

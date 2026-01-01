@@ -57,8 +57,8 @@ namespace Tests.Controllers
             var product = new Product { ProductID = 1, ProductName = "Phone", Price = 100, Stock=10, BrandID=1, Description="D", ImageUrl="I", IsActive=true };
             _context.Products.Add(product);
             
-            _context.ProductReviews.Add(new ProductReview { ReviewID = 1, ProductID = 1, UserID = 1, Rating = 5, Comment = "Good", ReviewDate = DateTime.UtcNow });
-            _context.ProductReviews.Add(new ProductReview { ReviewID = 2, ProductID = 1, UserID = 2, Rating = 3, Comment = "Okay", ReviewDate = DateTime.UtcNow });
+            _context.ProductReviews.Add(new ProductReview { ReviewID = 1, ProductID = 1, UserID = 1, Rating = 5, Comment = "Good", ReviewDate = DateTime.UtcNow, IsApproved = true });
+            _context.ProductReviews.Add(new ProductReview { ReviewID = 2, ProductID = 1, UserID = 2, Rating = 3, Comment = "Okay", ReviewDate = DateTime.UtcNow, IsApproved = true });
             await _context.SaveChangesAsync();
 
             var filter = new ReviewFilterParams();
@@ -87,8 +87,8 @@ namespace Tests.Controllers
             _context.Products.Add(product);
             
             // Aynı kullanıcı tarafından verilen iki farklı rating ekleniyor.
-            _context.ProductReviews.Add(new ProductReview { ReviewID = 1, ProductID = 1, UserID = 1, Rating = 5, Comment="Test" });
-            _context.ProductReviews.Add(new ProductReview { ReviewID = 2, ProductID = 1, UserID = 1, Rating = 1, Comment="Test" });
+            _context.ProductReviews.Add(new ProductReview { ReviewID = 1, ProductID = 1, UserID = 1, Rating = 5, Comment="Test", IsApproved = true });
+            _context.ProductReviews.Add(new ProductReview { ReviewID = 2, ProductID = 1, UserID = 1, Rating = 1, Comment="Test", IsApproved = true });
             await _context.SaveChangesAsync();
 
             var filter = new ReviewFilterParams { Rating = 5 };
@@ -105,6 +105,7 @@ namespace Tests.Controllers
         }
 
         // Bir kullanıcı satın aldığı ürüne yorum yapabilir mi test ediyoruz.
+        // NOT: Artık tüm yorumlar admin onayı gerektiriyor, bu yüzden IsApproved = false olacak.
         [Fact]
         public async Task CreateReview_ShouldReturnCreated_WhenUserHasPurchased()
         {
@@ -132,12 +133,13 @@ namespace Tests.Controllers
             // Yorum oluşturma isteği gönderiliyor.
             var result = await _controller.CreateReview(10, dto);
 
-            // Yorumun başarıyla oluştuğunu ve kullanıcının ürünü gerçekten satın aldığı için verified olduğunu kontrol ediyoruz.
+            // Yorumun başarıyla oluştuğunu kontrol ediyoruz.
+            // Not: Artık tüm yeni yorumlar IsApproved = false ile oluşturulur (moderasyon sistemi)
             var actionResult = Assert.IsType<CreatedAtActionResult>(result.Result);
             var apiResponse = Assert.IsType<ApiResponse<ReviewDto>>(actionResult.Value);
 
             Assert.True(apiResponse.Success);
-            Assert.True(apiResponse.Data.IsVerifiedPurchase);
+            Assert.False(apiResponse.Data.IsVerifiedPurchase); // Moderasyon sistemi: Tüm yorumlar onay bekler
         }
 
         // Aynı kullanıcı aynı ürüne ikinci kez yorum atınca hata dönmesi bekleniyor.

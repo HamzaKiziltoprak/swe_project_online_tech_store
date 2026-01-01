@@ -41,6 +41,8 @@ export interface ProductSpecification {
 
 export interface Review {
   productReviewID: number;
+  productID?: number;
+  productName?: string;
   userName: string;
   rating: number;
   reviewText?: string;
@@ -164,7 +166,7 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
     // Identity API returns: { type, title, status, detail, errors }
     // Custom API returns: { success, message, errors }
     let message = 'Beklenmeyen bir hata oluÅŸtu';
-    
+
     if (json?.detail) {
       // Identity API format - usually contains the main error message
       message = json.detail;
@@ -184,7 +186,7 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
         message = errorMessages.join(', ');
       }
     }
-    
+
     throw new Error(message);
   }
   if (hasContent) {
@@ -206,7 +208,7 @@ function unpackPaged<T>(data: any): PagedResult<T> {
 
 export const api = {
   async login(email: string, password: string) {
-    const response = await apiFetch<ApiResponse<{ 
+    const response = await apiFetch<ApiResponse<{
       token: string;
       user: {
         id: string;
@@ -221,12 +223,12 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    
+
     if (!response.data?.token) {
       throw new Error('Login failed - no access token received');
     }
-    
-    return { 
+
+    return {
       accessToken: response.data.token,
       user: response.data.user
     };
@@ -478,6 +480,23 @@ export const api = {
   async getBrands() {
     const res = await apiFetch<ApiResponse<Brand[]>>('/api/brands');
     return res.data || [];
+  },
+  // Admin Review Management
+  async getPendingReviews(token: string): Promise<Review[]> {
+    const res = await apiFetch<ApiResponse<Review[]>>('/api/reviews/pending', { token });
+    return res.data || [];
+  },
+  async approveReview(productId: number, reviewId: number, token: string) {
+    return apiFetch<ApiResponse<Review>>(`/api/products/${productId}/reviews/${reviewId}/approve`, {
+      method: 'PUT',
+      token,
+    });
+  },
+  async rejectReview(productId: number, reviewId: number, token: string) {
+    return apiFetch<ApiResponse<string>>(`/api/products/${productId}/reviews/${reviewId}/reject`, {
+      method: 'POST',
+      token,
+    });
   },
 };
 

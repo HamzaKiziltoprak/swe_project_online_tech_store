@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
-import type { AdminStats, UserProfile, ProductSummary, Category, Brand } from '../lib/api';
+import type { AdminStats, UserProfile, ProductSummary, Category, Brand, Review } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import { showSuccess, showError } from '../utils/toast';
 import '../styles/Admin.css';
 
 const AdminPage: React.FC = () => {
@@ -23,7 +24,13 @@ const AdminPage: React.FC = () => {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loadingProducts, setLoadingProducts] = useState<boolean>(false);
   const [productError, setProductError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'users' | 'products'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'products' | 'reviews'>('users');
+
+  // Review Management State
+  const [pendingReviews, setPendingReviews] = useState<Review[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState<boolean>(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
@@ -74,6 +81,42 @@ const AdminPage: React.FC = () => {
       setBrands(brandRes);
     } catch (err: any) {
       console.error('Error fetching categories/brands:', err);
+    }
+  };
+
+  const fetchPendingReviews = async () => {
+    if (!token) return;
+    setLoadingReviews(true);
+    setReviewError(null);
+    try {
+      const reviews = await api.getPendingReviews(token);
+      setPendingReviews(reviews);
+    } catch (err: any) {
+      setReviewError(err.message || t('error_loading_reviews'));
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
+
+  const handleApproveReview = async (productId: number, reviewId: number) => {
+    if (!token) return;
+    try {
+      await api.approveReview(productId, reviewId, token);
+      showSuccess(t('review_approved'));
+      fetchPendingReviews();
+    } catch (err: any) {
+      showError(err.message || 'Failed to approve review');
+    }
+  };
+
+  const handleRejectReview = async (productId: number, reviewId: number) => {
+    if (!token || !window.confirm(t('confirm_delete'))) return;
+    try {
+      await api.rejectReview(productId, reviewId, token);
+      showSuccess(t('review_rejected'));
+      fetchPendingReviews();
+    } catch (err: any) {
+      showError(err.message || 'Failed to reject review');
     }
   };
 
@@ -220,6 +263,15 @@ const AdminPage: React.FC = () => {
           }}
         >
           📦 {t('product_management')}
+        </button>
+        <button
+          className={`tab-button ${activeTab === 'reviews' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTab('reviews');
+            fetchPendingReviews();
+          }}
+        >
+          💬 {t('review_management')}
         </button>
       </div>
 
@@ -472,6 +524,64 @@ const AdminPage: React.FC = () => {
           )}
           {!loadingProducts && products.length === 0 && (
             <p className="empty-message">✨ {t('no_products')}</p>
+          )}
+        </section>
+      )}
+
+      {activeTab === 'reviews' && (
+        <section className="review-management panel">
+          <h3>💬 {t('review_management')}</h3>
+          {reviewError && <p className="error">⚠️ {reviewError}</p>}
+          {loadingReviews && <p>⏳ {t('loading')}</p>}
+          {!loadingReviews && pendingReviews.length > 0 && (
+            <div className="reviews-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>🛍️ {t('product')}</th>
+                    <th>👤 {t('reviewer')}</th>
+                    <th>⭐ {t('rating')}</th>
+                    <th>💬 {t('comment')}</th>
+                    <th>📅 {t('date')}</th>
+                    <th>⚙️ {t('actions')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingReviews.map((review) => (
+                    <tr key={review.productReviewID}>
+                      <td>{review.productName || `Product #${review.productID}`}</td>
+                      <td>{review.userName}</td>
+                      <td>
+                        <span className="rating-stars">
+                          {'⭐'.repeat(review.rating)}
+                        </span>
+                      </td>
+                      <td className="review-text-cell">{review.reviewText}</td>
+                      <td>{new Date(review.reviewDate).toLocaleDateString()}</td>
+                      <td>
+                        <div className="review-actions">
+                          <button
+                            className="approve-btn"
+                            onClick={() => handleApproveReview(review.productID!, review.productReviewID)}
+                          >
+                            ✅ {t('approve')}
+                          </button>
+                          <button
+                            className="reject-btn"
+                            onClick={() => handleRejectReview(review.productID!, review.productReviewID)}
+                          >
+                            ❌ {t('reject')}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {!loadingReviews && pendingReviews.length === 0 && (
+            <p className="empty-message">✨ {t('no_pending_reviews')}</p>
           )}
         </section>
       )}

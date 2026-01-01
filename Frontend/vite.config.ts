@@ -47,19 +47,8 @@ export default defineConfig({
     },
     server: {
         proxy: {
+            // Only proxy API requests to the backend
             '^/api': {
-                target,
-                secure: false
-            },
-            '^/login': {
-                target,
-                secure: false
-            },
-            '^/register': {
-                target,
-                secure: false
-            },
-            '^/refresh': {
                 target,
                 secure: false
             }

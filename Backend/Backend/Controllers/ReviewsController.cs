@@ -40,6 +40,7 @@ namespace Backend.Controllers
 
                 var query = _context.ProductReviews
                     .Where(r => r.ProductID == productId)
+                    .Where(r => r.IsApproved) // Only show approved reviews to public
                     .Include(r => r.User)
                     .AsQueryable();
 
@@ -111,6 +112,7 @@ namespace Backend.Controllers
 
                 var reviews = await _context.ProductReviews
                     .Where(r => r.ProductID == productId)
+                    .Where(r => r.IsApproved) // Only count approved reviews in summary
                     .Include(r => r.User)
                     .OrderByDescending(r => r.ReviewDate)
                     .ToListAsync();
@@ -204,7 +206,7 @@ namespace Backend.Controllers
                     Rating = request.Rating,
                     Comment = request.ReviewText ?? "",
                     ReviewDate = DateTime.UtcNow,
-                    IsApproved = hasPurchased
+                    IsApproved = false // All reviews require admin approval
                 };
 
                 _context.ProductReviews.Add(review);

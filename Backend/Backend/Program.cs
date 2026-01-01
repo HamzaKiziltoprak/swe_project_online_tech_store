@@ -178,4 +178,10 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// SPA Fallback: Serve index.html for all non-API routes
+// This fixes 404 errors when directly navigating to frontend routes (e.g., /products, /sss)
+// Only applies when frontend is served through .NET (production deployment)
+app.UseStaticFiles();
+app.MapFallbackToFile("index.html");
+
 app.Run();
