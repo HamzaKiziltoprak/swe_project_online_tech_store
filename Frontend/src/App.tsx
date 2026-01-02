@@ -10,7 +10,9 @@ import CartPage from './pages/CartPage';
 import AccountPage from './pages/AccountPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
+import RoleRoute from './components/RoleRoute';
 import AdminPage from './pages/AdminPage';
+import ProductManagerPage from './pages/ProductManagerPage';
 import ConfirmEmail from './pages/ConfirmEmail';
 import NotFound from './pages/NotFound';
 import { useAuth } from './context/AuthContext';
@@ -23,6 +25,7 @@ function App() {
   const { user, logout, token } = useAuth();
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
   const isAdmin = user?.roles?.includes('Admin');
+  const isProductManager = user?.roles?.includes('ProductManager');
 
   useEffect(() => {
     document.body.className = '';
@@ -63,6 +66,11 @@ function App() {
               {isAdmin && (
                 <li>
                   <Link to="/admin">⚙️ {t('admin')}</Link>
+                </li>
+              )}
+              {isProductManager && !isAdmin && (
+                <li>
+                  <Link to="/product-manager">📦 {t('product_manager_title') || 'Product Manager'}</Link>
                 </li>
               )}
             </ul>
@@ -124,6 +132,9 @@ function App() {
           </Route>
           <Route element={<AdminRoute />}>
             <Route path="/admin" element={<AdminPage />} />
+          </Route>
+          <Route element={<RoleRoute allowedRoles={['ProductManager', 'Admin']} />}>
+            <Route path="/product-manager" element={<ProductManagerPage />} />
           </Route>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />

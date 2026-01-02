@@ -172,6 +172,8 @@ i18n
           rating: 'Rating',
           comment: 'Comment',
           date: 'Date',
+          product_manager_title: 'Product Manager',
+          product_manager_description: 'Manage products and review moderation',
         },
       },
       tr: {
@@ -336,6 +338,8 @@ i18n
           rating: 'Puan',
           comment: 'Yorum',
           date: 'Tarih',
+          product_manager_title: 'Ürün Yöneticisi',
+          product_manager_description: 'Ürün ve yorum yönetimi',
         },
       },
     },
