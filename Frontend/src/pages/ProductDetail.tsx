@@ -71,6 +71,27 @@ const ProductDetail = () => {
     checkFavorite();
   }, [productId, token]);
 
+  // Refresh reviews when window gains focus (e.g., after admin approval in another tab)
+  useEffect(() => {
+    if (!productId) return;
+
+    const refreshReviews = async () => {
+      try {
+        const reviewList = await api.getReviews(productId);
+        setReviews(Array.isArray(reviewList) ? reviewList : []);
+      } catch (err: any) {
+        console.error('Failed to refresh reviews:', err);
+      }
+    };
+
+    const handleFocus = () => {
+      refreshReviews();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [productId]);
+
   // ✅ Sepete Ekle - Toast notification ile
   const handleAddToCart = async () => {
     if (!token) {

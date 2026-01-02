@@ -50,6 +50,16 @@ export interface Review {
   isVerifiedPurchase: boolean;
 }
 
+export interface MyReview {
+  productReviewID: number;
+  productID: number;
+  productName: string;
+  rating: number;
+  reviewText?: string;
+  reviewDate: string;
+  isApproved: boolean;
+}
+
 export interface CartItem {
   cartItemID: number;
   productID: number;
@@ -387,8 +397,8 @@ export const api = {
     return res.data || [];
   },
   async getReviews(productId: number) {
-    const res = await apiFetch<ApiResponse<Review[]>>(`/api/products/${productId}/reviews`);
-    return res.data || [];
+    const res = await apiFetch<ApiResponse<{ reviews: Review[]; totalCount: number }>>(`/api/products/${productId}/reviews`);
+    return res.data?.reviews || [];
   },
   async addReview(productId: number, rating: number, reviewText: string, token: string) {
     return apiFetch<ApiResponse<Review>>(`/api/products/${productId}/reviews`, {
@@ -396,6 +406,10 @@ export const api = {
       token,
       body: JSON.stringify({ rating, reviewText }),
     });
+  },
+  async getMyReviews(token: string): Promise<MyReview[]> {
+    const res = await apiFetch<ApiResponse<MyReview[]>>('/api/accounts/my-reviews', { token });
+    return res.data || [];
   },
   async toggleFavorite(productId: number, token: string) {
     return apiFetch<ApiResponse<FavoriteAction>>(`/api/favorites/${productId}`, {

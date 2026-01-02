@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
-import type { FavoriteItem, Order } from '../lib/api';
+import type { FavoriteItem, Order, MyReview } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import '../styles/Account.css';
 
@@ -10,8 +11,10 @@ const AccountPage = () => {
   const { t } = useTranslation();
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [myReviews, setMyReviews] = useState<MyReview[]>([]);
   const [loadingFavorites, setLoadingFavorites] = useState<boolean>(true);
   const [loadingOrders, setLoadingOrders] = useState<boolean>(true);
+  const [loadingReviews, setLoadingReviews] = useState<boolean>(true);
   const isAdmin = user?.roles?.includes('Admin');
 
   // Profile Update State
@@ -42,6 +45,10 @@ const AccountPage = () => {
         .getOrders(token)
         .then((res) => setOrders(res.items))
         .finally(() => setLoadingOrders(false));
+      api
+        .getMyReviews(token)
+        .then((res) => setMyReviews(res))
+        .finally(() => setLoadingReviews(false));
     }
   }, [token, isAdmin, refreshProfile]);
 
@@ -261,6 +268,31 @@ const AccountPage = () => {
                       </li>
                     ))}
                   </ul>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="panel">
+            <h3>💬 {t('my_reviews_title') || 'My Reviews'}</h3>
+            {loadingReviews && <p>{t('loading')}</p>}
+            {!loadingReviews && !myReviews.length && <p>✨ {t('no_reviews') || 'You have not written any reviews yet.'}</p>}
+            <div className="reviews-list">
+              {myReviews.map((review) => (
+                <div key={review.productReviewID} className="review-card">
+                  <div className="review-top">
+                    <Link to={`/products/${review.productID}`} className="product-link">
+                      🛍️ {review.productName}
+                    </Link>
+                    <span className={`status-badge ${review.isApproved ? 'badge-success' : 'badge-warning'}`}>
+                      {review.isApproved ? `🟢 ${t('review_published') || 'Published'}` : `🟡 ${t('review_pending') || 'Pending Approval'}`}
+                    </span>
+                  </div>
+                  <div className="review-rating">
+                    {'⭐'.repeat(review.rating)}
+                  </div>
+                  <p className="review-text">{review.reviewText}</p>
+                  <p className="review-date">📅 {new Date(review.reviewDate).toLocaleDateString()}</p>
                 </div>
               ))}
             </div>

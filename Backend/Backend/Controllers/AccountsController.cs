@@ -1,9 +1,11 @@
 using Backend.DTOs;
 using Backend.Models;
+using Backend.Data;
 using Backend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.Web;
 using System.IdentityModel.Tokens.Jwt;
@@ -670,6 +672,45 @@ namespace Backend.Controllers
             return Ok(ApiResponse<string>.SuccessResponse(
                 "Password has been reset successfully."
             ));
+        }
+
+        // GET: api/accounts/my-reviews
+        /// <summary>
+        /// Get all reviews by the current user (approved and pending)
+        /// </summary>
+        [HttpGet("my-reviews")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<List<MyReviewDto>>>> GetMyReviews()
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
+                var context = HttpContext.RequestServices.GetRequiredService<DataContext>();
+
+                var reviews = await context.ProductReviews
+                    .Where(r => r.UserID == userId)
+                    .Include(r => r.Product)
+                    .OrderByDescending(r => r.ReviewDate)
+                    .Select(r => new MyReviewDto
+                    {
+                        ProductReviewID = r.ReviewID,
+                        ProductID = r.ProductID,
+                        ProductName = r.Product.ProductName,
+                        Rating = r.Rating,
+                        ReviewText = r.Comment,
+                        ReviewDate = r.ReviewDate,
+                        IsApproved = r.IsApproved
+                    })
+                    .ToListAsync();
+
+                _logger.LogInformation($"User {userId} retrieved {reviews.Count} personal reviews");
+                return Ok(ApiResponse<List<MyReviewDto>>.SuccessResponse(reviews, "Your reviews retrieved successfully"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error retrieving user reviews: {ex.Message}");
+                return StatusCode(500, ApiResponse<List<MyReviewDto>>.FailureResponse("An error occurred", null));
+            }
         }
     }
 }

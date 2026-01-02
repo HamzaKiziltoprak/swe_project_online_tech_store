@@ -79,4 +79,18 @@ namespace Backend.DTOs
         public int PageNumber { get; set; } = 1;
         public int PageSize { get; set; } = 10;
     }
+
+    /// <summary>
+    /// DTO for user's own reviews with approval status
+    /// </summary>
+    public class MyReviewDto
+    {
+        public int ProductReviewID { get; set; }
+        public int ProductID { get; set; }
+        public string ProductName { get; set; } = null!;
+        public int Rating { get; set; }
+        public string? ReviewText { get; set; }
+        public DateTime ReviewDate { get; set; }
+        public bool IsApproved { get; set; }
+    }
 }
