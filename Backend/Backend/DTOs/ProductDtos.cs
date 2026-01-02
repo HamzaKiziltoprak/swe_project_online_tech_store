@@ -16,6 +16,7 @@ namespace Backend.DTOs
         public int? CriticalStockLevel { get; set; }
         public bool IsActive { get; set; }
         public double? AverageRating { get; set; }
+        public int ViewCount { get; set; }
     }
 
     // Ürün Detay Sayfası İçin (Tam Bilgi)

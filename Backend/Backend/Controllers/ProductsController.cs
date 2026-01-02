@@ -207,6 +207,10 @@ namespace Backend.Controllers
                         $"Product with ID {id} not found"));
                 }
 
+                // Increment view count
+                product.ViewCount++;
+                await _context.SaveChangesAsync();
+
                 var productDto = new ProductDetailDto
                 {
                     ProductID = product.ProductID,
@@ -320,6 +324,106 @@ namespace Backend.Controllers
                 _logger.LogError(ex, "Error retrieving featured products");
                 return StatusCode(500, ApiResponse<List<ProductListDto>>.FailureResponse(
                     "An error occurred while retrieving featured products"));
+            }
+        }
+
+        // GET: api/products/most-viewed
+        // En çok görüntülenen ürünleri getir (Analytics için - Admin/CompanyOwner)
+        [HttpGet("most-viewed")]
+        [Authorize(Roles = "Admin,CompanyOwner")]
+        public async Task<ActionResult<ApiResponse<List<ProductListDto>>>> GetMostViewedProducts([FromQuery] int count = 10)
+        {
+            try
+            {
+                if (count < 1 || count > 50)
+                {
+                    count = 10; // Default to 10 if invalid
+                }
+
+                var products = await _context.Products
+                    .Include(p => p.Category)
+                    .Include(p => p.Brand)
+                    .Where(p => p.IsActive && p.ViewCount > 0)
+                    .OrderByDescending(p => p.ViewCount)
+                    .Take(count)
+                    .Select(p => new ProductListDto
+                    {
+                        ProductID = p.ProductID,
+                        ProductName = p.ProductName,
+                        BrandID = p.BrandID,
+                        Brand = p.Brand.BrandName,
+                        Price = p.Price,
+                        ImageUrl = p.ImageUrl,
+                        CategoryName = p.Category.CategoryName,
+                        Stock = p.Stock,
+                        IsActive = p.IsActive,
+                        ViewCount = p.ViewCount
+                    })
+                    .ToListAsync();
+
+                _logger.LogInformation($"Retrieved {products.Count} most viewed products");
+
+                return Ok(ApiResponse<List<ProductListDto>>.SuccessResponse(
+                    products,
+                    $"Retrieved {products.Count} most viewed products"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving most viewed products");
+                return StatusCode(500, ApiResponse<List<ProductListDto>>.FailureResponse(
+                    "An error occurred while retrieving most viewed products"));
+            }
+        }
+
+        // GET: api/products/most-favorited
+        // En çok beğenilen ürünleri getir (Analytics için - Admin/CompanyOwner)
+        [HttpGet("most-favorited")]
+        [Authorize(Roles = "Admin,CompanyOwner")]
+        public async Task<ActionResult<ApiResponse<List<object>>>> GetMostFavoritedProducts([FromQuery] int count = 10)
+        {
+            try
+            {
+                if (count < 1 || count > 50) count = 10;
+
+                var mostFavorited = await _context.Favorites
+                    .Include(f => f.Product)
+                    .ThenInclude(p => p.Category)
+                    .Include(f => f.Product)
+                    .ThenInclude(p => p.Brand)
+                    .Where(f => f.Product.IsActive)
+                    .GroupBy(f => f.ProductID)
+                    .Select(g => new
+                    {
+                        ProductID = g.Key,
+                        FavoriteCount = g.Count(),
+                        Product = g.First().Product
+                    })
+                    .OrderByDescending(x => x.FavoriteCount)
+                    .Take(count)
+                    .ToListAsync();
+
+                var result = mostFavorited.Select(x => new
+                {
+                    productID = x.ProductID,
+                    productName = x.Product.ProductName,
+                    brand = x.Product.Brand.BrandName,
+                    categoryName = x.Product.Category.CategoryName,
+                    price = x.Product.Price,
+                    imageUrl = x.Product.ImageUrl,
+                    favoriteCount = x.FavoriteCount
+                }).ToList();
+
+                _logger.LogInformation($"Retrieved {result.Count} most favorited products");
+
+                return Ok(ApiResponse<List<object>>.SuccessResponse(
+                    result.Cast<object>().ToList(),
+                    $"Retrieved {result.Count} most favorited products"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving most favorited products");
+                return StatusCode(500, ApiResponse<List<object>>.FailureResponse(
+                    "An error occurred while retrieving most favorited products"));
             }
         }
 

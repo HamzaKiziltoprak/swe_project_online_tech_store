@@ -25,6 +25,7 @@ export interface ProductSummary {
   categoryName?: string;
   stock: number;
   isActive?: boolean;
+  viewCount?: number;
 }
 
 export interface ProductDetail extends ProductSummary {
@@ -336,6 +337,14 @@ export const api = {
     if (!res.data) throw new Error('Failed to load products');
     return unpackPaged<ProductSummary>(res.data);
   },
+  async getMostViewedProducts(token: string, count = 10) {
+    const res = await apiFetch<ApiResponse<ProductSummary[]>>(`/api/products/most-viewed?count=${count}`, { token });
+    return res.data || [];
+  },
+  async getMostFavoritedProducts(token: string, count = 10) {
+    const res = await apiFetch<ApiResponse<any[]>>(`/api/products/most-favorited?count=${count}`, { token });
+    return res.data || [];
+  },
   async createProduct(
     payload: {
       productName: string;
@@ -473,12 +482,24 @@ export const api = {
   async getOrders(token: string) {
     const res = await apiFetch<ApiResponse<any>>('/api/orders', { token });
     const data = res.data;
-    if (!data) throw new Error('SipariÅŸler alÄ±namadÄ±');
+    if (!data) throw new Error('Siparişler alınamadı');
     return {
       items: data.orders || data.Items || [],
       totalCount: data.totalCount ?? data.TotalCount ?? 0,
       pageNumber: data.pageNumber ?? data.PageNumber ?? 1,
       pageSize: data.pageSize ?? data.PageSize ?? 10,
+      totalPages: data.totalPages ?? data.TotalPages ?? 1,
+    } as PagedResult<Order>;
+  },
+  async getAllOrdersForOwner(token: string, pageNumber = 1, pageSize = 100) {
+    const res = await apiFetch<ApiResponse<any>>(`/api/orders/admin/all?PageNumber=${pageNumber}&PageSize=${pageSize}`, { token });
+    const data = res.data;
+    if (!data) throw new Error('Siparişler alınamadı');
+    return {
+      items: data.orders || data.Orders || [],
+      totalCount: data.totalCount ?? data.TotalCount ?? 0,
+      pageNumber: data.pageNumber ?? data.PageNumber ?? pageNumber,
+      pageSize: data.pageSize ?? data.PageSize ?? pageSize,
       totalPages: data.totalPages ?? data.TotalPages ?? 1,
     } as PagedResult<Order>;
   },
@@ -498,6 +519,10 @@ export const api = {
   // Admin Review Management
   async getPendingReviews(token: string): Promise<Review[]> {
     const res = await apiFetch<ApiResponse<Review[]>>('/api/reviews/pending', { token });
+    return res.data || [];
+  },
+  async getLatestReviews(token: string, count = 10): Promise<Review[]> {
+    const res = await apiFetch<ApiResponse<Review[]>>(`/api/reviews/latest?count=${count}`, { token });
     return res.data || [];
   },
   async approveReview(productId: number, reviewId: number, token: string) {

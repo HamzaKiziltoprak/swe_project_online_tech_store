@@ -481,10 +481,10 @@ namespace Backend.Controllers
         }
 
         /// <summary>
-        /// Get all pending reviews (Admin/ProductManager only)
+        /// Get all pending reviews (Admin/ProductManager/CompanyOwner)
         /// </summary>
         [HttpGet("/api/reviews/pending")]
-        [Authorize(Roles = "Admin,ProductManager")]
+        [Authorize(Roles = "Admin,ProductManager,CompanyOwner")]
         public async Task<ActionResult<ApiResponse<List<ReviewDto>>>> GetPendingReviews()
         {
             try
@@ -514,6 +514,46 @@ namespace Backend.Controllers
             {
                 _logger.LogError(ex, "Bekleyen review'lar getirilirken hata oluştu");
                 return StatusCode(500, ApiResponse<List<ReviewDto>>.FailureResponse("Bekleyen review'lar getirilirken bir hata oluştu"));
+            }
+        }
+
+        /// <summary>
+        /// Get latest approved reviews (Admin/CompanyOwner) - for dashboard
+        /// </summary>
+        [HttpGet("/api/reviews/latest")]
+        [Authorize(Roles = "Admin,CompanyOwner")]
+        public async Task<ActionResult<ApiResponse<List<ReviewDto>>>> GetLatestReviews([FromQuery] int count = 10)
+        {
+            try
+            {
+                if (count < 1 || count > 50) count = 10;
+
+                var latestReviews = await _context.ProductReviews
+                    .Where(r => r.IsApproved)
+                    .Include(r => r.User)
+                    .Include(r => r.Product)
+                    .OrderByDescending(r => r.ReviewDate)
+                    .Take(count)
+                    .ToListAsync();
+
+                var reviewDtos = latestReviews.Select(r => new ReviewDto
+                {
+                    ProductReviewID = r.ReviewID,
+                    ProductID = r.ProductID,
+                    ProductName = r.Product.ProductName,
+                    UserName = r.User?.UserName ?? "Anonymous",
+                    Rating = r.Rating,
+                    ReviewText = r.Comment,
+                    ReviewDate = r.ReviewDate,
+                    IsVerifiedPurchase = r.IsApproved
+                }).ToList();
+
+                return Ok(ApiResponse<List<ReviewDto>>.SuccessResponse(reviewDtos, $"{reviewDtos.Count} son review bulundu"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Son review'lar getirilirken hata oluştu");
+                return StatusCode(500, ApiResponse<List<ReviewDto>>.FailureResponse("Son review'lar getirilirken bir hata oluştu"));
             }
         }
     }

@@ -303,10 +303,10 @@ namespace Backend.Controllers
         }
 
         /// <summary>
-        /// Tüm siparişleri listele (Admin Only) - Filtreleme ve Sayfalama ile
+        /// Tüm siparişleri listele (Admin/CompanyOwner) - Filtreleme ve Sayfalama ile
         /// </summary>
         [HttpGet("admin/all")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,CompanyOwner")]
         public async Task<ActionResult<ApiResponse<PagedOrderResult>>> GetAllOrders(
             [FromQuery] OrderFilterParams filterParams)
         {

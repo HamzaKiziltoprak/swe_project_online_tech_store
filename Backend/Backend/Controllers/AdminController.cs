@@ -11,7 +11,6 @@ namespace Backend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin")]
     public class AdminController : ControllerBase
     {
         private readonly DataContext _context;
@@ -35,6 +34,7 @@ namespace Backend.Controllers
         /// Kullanıcıya rol ata (Employee, ProductManager, Admin)
         /// </summary>
         [HttpPost("assign-role")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<ApiResponse<AssignRoleResponseDto>>> AssignRole(
             [FromBody] AssignRoleRequestDto assignRoleDto)
         {
@@ -131,6 +131,7 @@ namespace Backend.Controllers
         /// Admin istatistiklerini getir (Tüm sistem metrikleri)
         /// </summary>
         [HttpGet("stats")]
+        [Authorize(Roles = "Admin,CompanyOwner")]
         public async Task<ActionResult<ApiResponse<AdminStatsDto>>> GetStats()
         {
             try

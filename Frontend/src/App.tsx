@@ -13,6 +13,7 @@ import AdminRoute from './components/AdminRoute';
 import RoleRoute from './components/RoleRoute';
 import AdminPage from './pages/AdminPage';
 import ProductManagerPage from './pages/ProductManagerPage';
+import CompanyOwnerPage from './pages/CompanyOwnerPage';
 import ConfirmEmail from './pages/ConfirmEmail';
 import NotFound from './pages/NotFound';
 import { useAuth } from './context/AuthContext';
@@ -26,6 +27,7 @@ function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
   const isAdmin = user?.roles?.includes('Admin');
   const isProductManager = user?.roles?.includes('ProductManager');
+  const isCompanyOwner = user?.roles?.includes('CompanyOwner');
 
   useEffect(() => {
     document.body.className = '';
@@ -40,7 +42,7 @@ function App() {
     <div className="app-shell">
       <header className="app-header">
         <div className="brand">
-          <Link to={isAdmin ? '/admin' : '/products'} className="logo">
+          <Link to={isAdmin ? '/admin' : isCompanyOwner ? '/company-owner' : '/products'} className="logo">
             {t('site_name')}
           </Link>
         </div>
@@ -63,14 +65,19 @@ function App() {
                   <Link to="/account">👤 {t('account')}</Link>
                 </li>
               )}
-              {isAdmin && (
+              {token && isAdmin && (
                 <li>
                   <Link to="/admin">⚙️ {t('admin')}</Link>
                 </li>
               )}
-              {isProductManager && !isAdmin && (
+              {token && isProductManager && !isAdmin && (
                 <li>
                   <Link to="/product-manager">📦 {t('product_manager_title') || 'Product Manager'}</Link>
+                </li>
+              )}
+              {token && isCompanyOwner && !isAdmin && (
+                <li>
+                  <Link to="/company-owner">📊 {t('company_owner_dashboard')}</Link>
                 </li>
               )}
             </ul>
@@ -106,18 +113,28 @@ function App() {
             <h1>
               {isAdmin
                 ? `${t('welcome')}, ${user?.firstName}! 👋`
-                : `${t('welcome')}, ${user?.firstName}! 🛍️`}
+                : isCompanyOwner
+                  ? `${t('welcome')}, ${user?.firstName}! 📊`
+                  : `${t('welcome')}, ${user?.firstName}! 🛍️`}
             </h1>
             <p>
               {isAdmin
                 ? t('welcome_admin_message')
-                : t('welcome_customer_message')}
+                : isCompanyOwner
+                  ? t('welcome_company_owner_message')
+                  : t('welcome_customer_message')}
             </p>
           </div>
         )}
 
         <Routes>
-          <Route path="/" element={<Navigate to={isAdmin ? '/admin' : '/products'} replace />} />
+          <Route path="/" element={
+            <Navigate to={
+              isAdmin ? '/admin' :
+                isCompanyOwner ? '/company-owner' :
+                  '/products'
+            } replace />
+          } />
           <Route
             path="/products"
             element={isAdmin ? <Navigate to="/admin" replace /> : <Products />}
@@ -135,6 +152,9 @@ function App() {
           </Route>
           <Route element={<RoleRoute allowedRoles={['ProductManager', 'Admin']} />}>
             <Route path="/product-manager" element={<ProductManagerPage />} />
+          </Route>
+          <Route element={<RoleRoute allowedRoles={['CompanyOwner', 'Admin']} />}>
+            <Route path="/company-owner" element={<CompanyOwnerPage />} />
           </Route>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
