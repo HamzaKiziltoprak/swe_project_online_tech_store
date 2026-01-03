@@ -271,3 +271,30 @@
   color: var(--text-color);
   opacity: 0.7;
 }
+
+/* Order Status Badges */
+.status-pending {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #f59e0b !important;
+}
+
+.status-processing {
+  background: rgba(59, 130, 246, 0.15) !important;
+  color: #3b82f6 !important;
+}
+
+.status-shipped {
+  background: rgba(139, 92, 246, 0.15) !important;
+  color: #8b5cf6 !important;
+}
+
+.status-delivered,
+.status-completed {
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #10b981 !important;
+}
+
+.status-cancelled {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #ef4444 !important;
+}

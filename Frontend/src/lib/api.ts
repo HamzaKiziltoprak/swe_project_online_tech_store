@@ -479,6 +479,13 @@ export const api = {
       body: JSON.stringify({ shippingAddress }),
     });
   },
+  async purchaseSingleItem(cartItemID: number, shippingAddress: string, token: string) {
+    return apiFetch<ApiResponse<Order>>('/api/orders/single-item', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ cartItemID, shippingAddress }),
+    });
+  },
   async getOrders(token: string) {
     const res = await apiFetch<ApiResponse<any>>('/api/orders', { token });
     const data = res.data;
@@ -535,6 +542,13 @@ export const api = {
     return apiFetch<ApiResponse<string>>(`/api/products/${productId}/reviews/${reviewId}/reject`, {
       method: 'POST',
       token,
+    });
+  },
+  async updateOrderStatus(orderId: number, status: string, token: string) {
+    return apiFetch<ApiResponse<Order>>(`/api/orders/${orderId}/status`, {
+      method: 'PATCH',
+      token,
+      body: JSON.stringify({ status }),
     });
   },
 };

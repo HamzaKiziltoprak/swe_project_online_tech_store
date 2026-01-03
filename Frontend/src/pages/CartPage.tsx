@@ -6,6 +6,8 @@ import type { CartItem, CartSummary } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import '../styles/Cart.css';
 
+const MIN_ADDRESS_LENGTH = 10;
+
 const CartPage = () => {
   const { token } = useAuth();
   const { t } = useTranslation();
@@ -13,8 +15,14 @@ const CartPage = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [address, setAddress] = useState<string>('');
+  const [addressTouched, setAddressTouched] = useState<boolean>(false);
   const [itemLoading, setItemLoading] = useState<number | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState<boolean>(false);
+  const [purchasingItemId, setPurchasingItemId] = useState<number | null>(null);
+
+  // Adres validasyonu
+  const isAddressValid = address.trim().length >= MIN_ADDRESS_LENGTH;
+  const showAddressError = addressTouched && !isAddressValid && address.length > 0;
 
   const loadCart = async () => {
     if (!token) return;
@@ -82,8 +90,15 @@ const CartPage = () => {
   const checkout = async () => {
     if (!token || !cart || checkoutLoading) return;
 
+    setAddressTouched(true);
+
     if (!address || address.trim() === '') {
       toast.warning(t('address_required'));
+      return;
+    }
+
+    if (!isAddressValid) {
+      toast.warning(t('address_min_length'));
       return;
     }
 
@@ -93,11 +108,40 @@ const CartPage = () => {
       const res = await api.createOrder(address, token);
       toast.success(`${t('order_placed_success')} #${res.data?.orderID ?? ''}`);
       setAddress('');
+      setAddressTouched(false);
       await loadCart();
     } catch (err: any) {
       toast.error(err.message || t('checkout_error'));
     } finally {
       setCheckoutLoading(false);
+    }
+  };
+
+  const purchaseSingleItem = async (item: CartItem) => {
+    if (!token || purchasingItemId === item.cartItemID) return;
+
+    setAddressTouched(true);
+
+    if (!address || address.trim() === '') {
+      toast.warning(t('address_required'));
+      return;
+    }
+
+    if (!isAddressValid) {
+      toast.warning(t('address_min_length'));
+      return;
+    }
+
+    setPurchasingItemId(item.cartItemID);
+    setError(null);
+    try {
+      const res = await api.purchaseSingleItem(item.cartItemID, address, token);
+      toast.success(`${t('item_purchased_success')} #${res.data?.orderID ?? ''}`);
+      await loadCart();
+    } catch (err: any) {
+      toast.error(err.message || t('purchase_error'));
+    } finally {
+      setPurchasingItemId(null);
     }
   };
 
@@ -117,7 +161,7 @@ const CartPage = () => {
               alt={item.productName}
               className="cart-item-image"
             />
-            <div>
+            <div className="cart-item-info">
               <p className="name">🏷️ {item.productName}</p>
               <p className="price">💰 ₺{item.price}</p>
             </div>
@@ -139,13 +183,23 @@ const CartPage = () => {
               </button>
             </div>
             <p className="subtotal">💵 ₺{item.subtotal}</p>
-            <button
-              className="link-button"
-              onClick={() => removeItem(item)}
-              disabled={itemLoading === item.cartItemID}
-            >
-              🗑️ {t('remove')}
-            </button>
+            <div className="cart-item-actions">
+              <button
+                className="buy-button"
+                onClick={() => purchaseSingleItem(item)}
+                disabled={purchasingItemId === item.cartItemID || !isAddressValid}
+                title={!isAddressValid ? t('address_min_length') : t('buy_this_item')}
+              >
+                🛍️ {t('buy_this_item')} {purchasingItemId === item.cartItemID && <small>⏳</small>}
+              </button>
+              <button
+                className="link-button"
+                onClick={() => removeItem(item)}
+                disabled={itemLoading === item.cartItemID}
+              >
+                🗑️ {t('remove')}
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -156,18 +210,30 @@ const CartPage = () => {
         <p>
           💳 {t('total_price')}: ₺{cart.totalPrice}
         </p>
-        <textarea
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          placeholder={t('address_placeholder')}
-          rows={3}
-        />
+        <div className="address-input-wrapper">
+          <textarea
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            onBlur={() => setAddressTouched(true)}
+            placeholder={t('address_placeholder')}
+            rows={3}
+            className={showAddressError ? 'input-error' : ''}
+          />
+          {showAddressError && (
+            <p className="address-hint">⚠️ {t('address_min_length')}</p>
+          )}
+          {!showAddressError && address.length > 0 && address.length < MIN_ADDRESS_LENGTH && (
+            <p className="address-counter">
+              {address.length}/{MIN_ADDRESS_LENGTH} {t('characters')}
+            </p>
+          )}
+        </div>
         <div className="summary-actions">
           <button onClick={clearCart} disabled={loading}>
             🧹 {t('clear_cart')}
           </button>
-          <button onClick={checkout} disabled={checkoutLoading}>
-            ✅ {t('checkout')} {checkoutLoading && <small>⏳</small>}
+          <button onClick={checkout} disabled={checkoutLoading || !isAddressValid}>
+            ✅ {t('checkout_all')} {checkoutLoading && <small>⏳</small>}
           </button>
         </div>
       </div>

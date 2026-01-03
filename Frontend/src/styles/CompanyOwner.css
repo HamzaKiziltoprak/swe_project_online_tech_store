@@ -535,3 +535,237 @@ body.dark .most-viewed-item {
 body.dark .most-favorited-item {
     background: rgba(233, 30, 99, 0.15);
 }
+
+/* Sold Products Table Section */
+.sold-products-section {
+    margin-top: 2rem;
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sold-products-section h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+    font-size: 1.3rem;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.sold-products-table-wrapper {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.sold-products-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 800px;
+}
+
+.sold-products-table thead {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+}
+
+.sold-products-table th {
+    padding: 1rem;
+    text-align: left;
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sold-products-table tbody tr {
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.2s;
+}
+
+.sold-products-table tbody tr:hover {
+    background: var(--hover-bg);
+}
+
+.sold-products-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.sold-products-table td {
+    padding: 0.875rem 1rem;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.sold-products-table td:first-child {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.sold-products-table .status-badge {
+    display: inline-flex;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Dark mode for sold products table */
+body.dark .sold-products-section {
+    background: var(--card-bg-dark, #2d3748);
+}
+
+body.dark .sold-products-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+body.dark .sold-products-table-wrapper {
+    border-color: var(--border-color);
+}
+
+/* Responsive table adjustments */
+@media (max-width: 768px) {
+    .sold-products-section {
+        padding: 1rem;
+    }
+
+    .sold-products-table th,
+    .sold-products-table td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.8rem;
+    }
+}
+
+/* Order Management Section */
+.order-management-section {
+    margin-top: 2rem;
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid #3b82f6;
+}
+
+.order-management-section h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+    font-size: 1.3rem;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.order-management-table-wrapper {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.order-management-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 700px;
+}
+
+.order-management-table thead {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.order-management-table th {
+    padding: 1rem;
+    text-align: left;
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.order-management-table tbody tr {
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.2s;
+}
+
+.order-management-table tbody tr:hover {
+    background: var(--hover-bg);
+}
+
+.order-management-table td {
+    padding: 0.875rem 1rem;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.status-select {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--card-bg);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 140px;
+}
+
+.status-select:hover:not(:disabled) {
+    border-color: #3b82f6;
+}
+
+.status-select:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.status-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.updating-indicator {
+    margin-left: 0.5rem;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Dark mode for order management */
+body.dark .order-management-section {
+    background: var(--card-bg-dark, #2d3748);
+}
+
+body.dark .order-management-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+body.dark .status-select {
+    background: var(--card-bg-dark, #2d3748);
+    border-color: var(--border-color);
+}
+
+@media (max-width: 768px) {
+    .order-management-section {
+        padding: 1rem;
+    }
+
+    .order-management-table th,
+    .order-management-table td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    .status-select {
+        min-width: 100px;
+        font-size: 0.75rem;
+        padding: 0.375rem 0.5rem;
+    }
+}

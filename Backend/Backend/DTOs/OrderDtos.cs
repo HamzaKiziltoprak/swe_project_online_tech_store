@@ -103,4 +103,16 @@ namespace Backend.DTOs
         public string Message { get; set; } = null!;
         public string Status { get; set; } = null!; // Authorized, Failed, InsufficientFunds
     }
+
+    // Tek Ürün Satın Alma için DTO
+    public class PurchaseSingleItemDto
+    {
+        [Required(ErrorMessage = "Sepet öğesi ID'si gereklidir")]
+        public int CartItemID { get; set; }
+
+        [Required(ErrorMessage = "Teslimat adresi gereklidir")]
+        [MinLength(10, ErrorMessage = "Adres en az 10 karakter olmalıdır")]
+        [MaxLength(500, ErrorMessage = "Adres en fazla 500 karakter olabilir")]
+        public string ShippingAddress { get; set; } = null!;
+    }
 }

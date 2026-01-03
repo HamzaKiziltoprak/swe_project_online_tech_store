@@ -496,6 +496,64 @@ const CompanyOwnerPage: React.FC = () => {
                         </ul>
                     )}
                 </div>
+
+                {/* Sold Products Table */}
+                <div className="sold-products-section">
+                    <h3>🧾 {t('sold_products_table')}</h3>
+                    {data.orders.length === 0 ? (
+                        <p className="empty-message">{t('no_sales_data')}</p>
+                    ) : (
+                        <div className="sold-products-table-wrapper">
+                            <table className="sold-products-table">
+                                <thead>
+                                    <tr>
+                                        <th>{t('order_id')}</th>
+                                        <th>{t('product')}</th>
+                                        <th>{t('customer')}</th>
+                                        <th>{t('quantity')}</th>
+                                        <th>{t('price')}</th>
+                                        <th>{t('total')}</th>
+                                        <th>{t('date')}</th>
+                                        <th>{t('status')}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {data.orders
+                                        .flatMap((order) =>
+                                            order.items?.map((item) => ({
+                                                orderID: order.orderID,
+                                                productName: item.productName,
+                                                customerEmail: order.userEmail,
+                                                quantity: item.quantity,
+                                                unitPrice: item.unitPrice,
+                                                subtotal: item.subtotal,
+                                                orderDate: order.orderDate,
+                                                status: order.status,
+                                            })) || []
+                                        )
+                                        .sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime())
+                                        .slice(0, 50)
+                                        .map((sale, index) => (
+                                            <tr key={`${sale.orderID}-${index}`}>
+                                                <td>#{sale.orderID}</td>
+                                                <td>{sale.productName}</td>
+                                                <td>{sale.customerEmail}</td>
+                                                <td>{sale.quantity}</td>
+                                                <td>₺{sale.unitPrice.toFixed(2)}</td>
+                                                <td>₺{sale.subtotal.toFixed(2)}</td>
+                                                <td>{new Date(sale.orderDate).toLocaleDateString('tr-TR')}</td>
+                                                <td>
+                                                    <span className={`status-badge status-${sale.status.toLowerCase()}`}>
+                                                        {sale.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

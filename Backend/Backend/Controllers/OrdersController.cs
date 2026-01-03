@@ -87,7 +87,7 @@ namespace Backend.Controllers
                 {
                     UserID = int.Parse(userId),
                     Status = "Pending",
-                    OrderDate = DateTime.Now,
+                    OrderDate = DateTime.UtcNow,
                     ShippingAddress = createOrderDto.ShippingAddress
                 };
 
@@ -141,7 +141,10 @@ namespace Backend.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Sipariş oluşturulurken hata oluştu");
-                return StatusCode(500, ApiResponse<OrderDto>.FailureResponse("Sipariş oluşturulurken bir hata oluştu"));
+                return StatusCode(500, ApiResponse<OrderDto>.FailureResponse(
+                    $"Sipariş oluşturulurken bir hata oluştu: {ex.Message}", 
+                    new List<string> { ex.InnerException?.Message ?? ex.StackTrace?.Substring(0, Math.Min(500, ex.StackTrace?.Length ?? 0)) ?? "" }
+                ));
             }
         }
 
@@ -255,10 +258,10 @@ namespace Backend.Controllers
         }
 
         /// <summary>
-        /// Sipariş durumunu güncelle (Admin Only)
+        /// Sipariş durumunu güncelle (Admin/ProductManager)
         /// </summary>
         [HttpPatch("{id}/status")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,ProductManager")]
         public async Task<ActionResult<ApiResponse<OrderDto>>> UpdateOrderStatus(
             [FromRoute] int id,
             [FromBody] UpdateOrderStatusDto updateStatusDto)
@@ -303,10 +306,10 @@ namespace Backend.Controllers
         }
 
         /// <summary>
-        /// Tüm siparişleri listele (Admin/CompanyOwner) - Filtreleme ve Sayfalama ile
+        /// Tüm siparişleri listele (Admin/CompanyOwner/ProductManager) - Filtreleme ve Sayfalama ile
         /// </summary>
         [HttpGet("admin/all")]
-        [Authorize(Roles = "Admin,CompanyOwner")]
+        [Authorize(Roles = "Admin,CompanyOwner,ProductManager")]
         public async Task<ActionResult<ApiResponse<PagedOrderResult>>> GetAllOrders(
             [FromQuery] OrderFilterParams filterParams)
         {
@@ -1063,6 +1066,120 @@ namespace Backend.Controllers
                     Success = false,
                     Message = "An error occurred while processing your order. Please try again."
                 });
+            }
+        }
+
+        /// <summary>
+        /// Sepetteki tek bir ürünü satın al (Sadece Customer)
+        /// </summary>
+        [HttpPost("single-item")]
+        [Authorize(Roles = "Customer")]
+        public async Task<ActionResult<ApiResponse<OrderDto>>> PurchaseSingleItem([FromBody] PurchaseSingleItemDto dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ApiResponse<OrderDto>.FailureResponse(
+                        "Validation failed",
+                        ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList()
+                    ));
+                }
+
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(ApiResponse<OrderDto>.FailureResponse("Kullanıcı tanınmadı"));
+                }
+
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return NotFound(ApiResponse<OrderDto>.FailureResponse("Kullanıcı bulunamadı"));
+                }
+
+                // Sepet öğesini bul
+                var cartItem = await _context.CartItems
+                    .Include(ci => ci.Product)
+                    .FirstOrDefaultAsync(ci => ci.CartItemID == dto.CartItemID && ci.UserID.ToString() == userId);
+
+                if (cartItem == null)
+                {
+                    return NotFound(ApiResponse<OrderDto>.FailureResponse("Sepet öğesi bulunamadı"));
+                }
+
+                // Ürün ve stok kontrolü
+                if (cartItem.Product == null)
+                {
+                    return BadRequest(ApiResponse<OrderDto>.FailureResponse("Ürün bulunamadı"));
+                }
+
+                if (!cartItem.Product.IsActive)
+                {
+                    return BadRequest(ApiResponse<OrderDto>.FailureResponse("Bu ürün artık satışta değil"));
+                }
+
+                if (cartItem.Product.Stock < cartItem.Count)
+                {
+                    return BadRequest(ApiResponse<OrderDto>.FailureResponse(
+                        $"Ürün '{cartItem.Product.ProductName}' stokta yeterli miktarda mevcut değildir. Stok: {cartItem.Product.Stock}"
+                    ));
+                }
+
+                // Sipariş oluştur
+                var order = new Order
+                {
+                    UserID = int.Parse(userId),
+                    Status = "Pending",
+                    OrderDate = DateTime.UtcNow,
+                    ShippingAddress = dto.ShippingAddress,
+                    TotalAmount = cartItem.Product.Price * cartItem.Count
+                };
+
+                // Sipariş öğesi ekle
+                var orderItem = new OrderItem
+                {
+                    ProductID = cartItem.ProductID,
+                    UnitPrice = cartItem.Product.Price,
+                    Quantity = cartItem.Count
+                };
+                order.OrderItems.Add(orderItem);
+
+                // Stoktan düş
+                cartItem.Product.Stock -= cartItem.Count;
+
+                // Veritabanına ekle
+                _context.Orders.Add(order);
+
+                // Sepetten sil
+                _context.CartItems.Remove(cartItem);
+
+                await _context.SaveChangesAsync();
+
+                // Transaction kaydı oluştur
+                var transaction = new Transaction
+                {
+                    TransactionType = "Purchase",
+                    Amount = order.TotalAmount,
+                    TransactionDate = DateTime.UtcNow,
+                    Description = $"Order #{order.OrderID} - Single item purchase: {cartItem.Product.ProductName}",
+                    Status = "Completed",
+                    OrderID = order.OrderID,
+                    UserID = int.Parse(userId)
+                };
+                _context.Transactions.Add(transaction);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Tek ürün satın alındı: OrderID={order.OrderID}, ProductID={cartItem.ProductID}, UserID={userId}");
+
+                var orderDto = MapOrderToDto(order, user.Email ?? "");
+                return CreatedAtAction(nameof(GetOrderById), new { id = order.OrderID },
+                    ApiResponse<OrderDto>.SuccessResponse(orderDto, "Ürün başarıyla satın alındı"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Tek ürün satın alınırken hata oluştu");
+                return StatusCode(500, ApiResponse<OrderDto>.FailureResponse("Satın alma işlemi sırasında bir hata oluştu"));
             }
         }
     }

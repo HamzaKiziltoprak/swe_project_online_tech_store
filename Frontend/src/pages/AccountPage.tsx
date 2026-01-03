@@ -251,25 +251,30 @@ const AccountPage = () => {
             {loadingOrders && <p>{t('loading')}</p>}
             {!loadingOrders && !orders.length && <p>✨ {t('orders_empty')}</p>}
             <div className="orders-list">
-              {orders.map((order) => (
-                <div key={order.orderID} className="order-card">
-                  <div className="order-top">
-                    <strong>🛒 #{order.orderID}</strong>
-                    <span className="badge">📍 {order.status}</span>
+              {orders.map((order) => {
+                const statusKey = `order_status_${order.status.toLowerCase()}`;
+                const translatedStatus = t(statusKey) || order.status;
+                const statusClass = order.status.toLowerCase();
+                return (
+                  <div key={order.orderID} className="order-card">
+                    <div className="order-top">
+                      <strong>🛒 #{order.orderID}</strong>
+                      <span className={`badge status-${statusClass}`}>📍 {translatedStatus}</span>
+                    </div>
+                    <p>📅 {new Date(order.orderDate).toLocaleDateString()}</p>
+                    <p>
+                      💳 {t('total_price')}: ₺{order.totalAmount}
+                    </p>
+                    <ul>
+                      {order.items.map((item) => (
+                        <li key={item.orderItemID}>
+                          📝 {item.productName} x{item.quantity} - ₺{item.unitPrice}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <p>📅 {new Date(order.orderDate).toLocaleDateString()}</p>
-                  <p>
-                    💳 {t('total_price')}: ₺{order.totalAmount}
-                  </p>
-                  <ul>
-                    {order.items.map((item) => (
-                      <li key={item.orderItemID}>
-                        📝 {item.productName} x{item.quantity} - ₺{item.unitPrice}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
 
