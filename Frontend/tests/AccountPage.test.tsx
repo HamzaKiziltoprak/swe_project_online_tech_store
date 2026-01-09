@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import AccountPage from '@/pages/AccountPage'; 
+import AccountPage from '@/pages/AccountPage';
 import { AuthContext } from '@/context/AuthContext';
 import { api } from '@/lib/api';
 
@@ -16,6 +16,7 @@ vi.mock('@/lib/api', () => ({
     getOrders: vi.fn(),
     updateProfile: vi.fn(),
     changePassword: vi.fn(),
+    getMyReviews: vi.fn(),
   },
 }));
 
@@ -46,19 +47,20 @@ describe('AccountPage Component', () => {
 
     (api.getFavorites as any).mockResolvedValue(mockFavorites);
     (api.getOrders as any).mockResolvedValue(mockOrders);
+    (api.getMyReviews as any).mockResolvedValue([]);
   });
 
   const renderAccountPage = async (user = mockUser) => {
     await act(async () => {
       render(
         <AuthContext.Provider
-          value={{ 
+          value={{
             token: 'fake-token',
             user,
             login: vi.fn(),
             logout: vi.fn(),
             loading: false,
-            refreshProfile: vi.fn().mockResolvedValue({}) 
+            refreshProfile: vi.fn().mockResolvedValue({})
           }}
         >
           <MemoryRouter>
@@ -81,14 +83,14 @@ describe('AccountPage Component', () => {
 
     const profilePanel = screen.getByText(/profile_title/i).closest('section');
     const editBtn = profilePanel?.querySelector('.edit-button');
-    
+
     if (editBtn) fireEvent.click(editBtn);
 
     const firstNameInput = screen.getByLabelText(/first_name/i);
     await act(async () => {
       fireEvent.change(firstNameInput, { target: { value: 'Testing' } });
     });
-    
+
     expect(firstNameInput).toHaveValue('Testing');
   });
 
@@ -97,12 +99,12 @@ describe('AccountPage Component', () => {
 
     const passwordPanel = screen.getByText(/change_password_title/i).closest('section');
     const editBtn = passwordPanel?.querySelector('.edit-button');
-    
+
     if (editBtn) fireEvent.click(editBtn);
 
     const newPassInput = screen.getByLabelText(/new_password/i);
     const confirmPassInput = screen.getByLabelText(/confirm_password/i);
-    
+
     await act(async () => {
       fireEvent.change(newPassInput, { target: { value: 'Password123!' } });
       fireEvent.change(confirmPassInput, { target: { value: 'Password456!' } });

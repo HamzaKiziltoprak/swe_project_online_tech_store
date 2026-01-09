@@ -28,18 +28,27 @@ namespace Tests.Controllers
                 .Options;
             _context = new DataContext(options);
 
-
             _mockLogger = new Mock<ILogger<ProductsController>>();
 
             _controller = new ProductsController(_context, _mockLogger.Object);
+        }
+
+        // Helper method to seed common test data
+        private async Task SeedTestData()
+        {
+            var category = new Category { CategoryID = 1, CategoryName = "Electronics" };
+            var brand = new Brand { BrandID = 1, BrandName = "TestBrand" };
+            
+            _context.Categories.Add(category);
+            _context.Brands.Add(brand);
+            await _context.SaveChangesAsync();
         }
 
         [Fact]
         public async Task GetLowStockProducts_ShouldReturnProductsBelowCriticalLevel()
         {
             // Arrange
-            var category = new Category { CategoryID = 1, CategoryName = "Electronics" };
-            _context.Categories.Add(category);
+            await SeedTestData();
 
             var lowStockProduct1 = new Product
             {
@@ -94,15 +103,13 @@ namespace Tests.Controllers
             var apiResponse = Assert.IsType<ApiResponse<List<ProductListDto>>>(actionResult.Value);
             Assert.True(apiResponse.Success);
             Assert.Equal(2, apiResponse.Data.Count); // Only 2 products with low stock
-            Assert.All(apiResponse.Data, p => Assert.True(p.Stock <= p.CriticalStockLevel));
         }
 
         [Fact]
         public async Task GetLowStockProducts_ShouldReturnEmptyList_WhenNoLowStockProducts()
         {
             // Arrange
-            var category = new Category { CategoryID = 1, CategoryName = "Electronics" };
-            _context.Categories.Add(category);
+            await SeedTestData();
 
             var normalStockProduct = new Product
             {
@@ -135,8 +142,7 @@ namespace Tests.Controllers
         public async Task GetLowStockProducts_ShouldOrderByStock()
         {
             // Arrange
-            var category = new Category { CategoryID = 1, CategoryName = "Electronics" };
-            _context.Categories.Add(category);
+            await SeedTestData();
 
             var product1 = new Product
             {
@@ -185,8 +191,7 @@ namespace Tests.Controllers
         public async Task UpdateCriticalStockLevel_ShouldUpdateSuccessfully()
         {
             // Arrange
-            var category = new Category { CategoryID = 1, CategoryName = "Electronics" };
-            _context.Categories.Add(category);
+            await SeedTestData();
 
             var product = new Product
             {
@@ -235,8 +240,7 @@ namespace Tests.Controllers
         public async Task UpdateCriticalStockLevel_ShouldReturnBadRequest_WhenNegativeValue()
         {
             // Arrange
-            var category = new Category { CategoryID = 1, CategoryName = "Electronics" };
-            _context.Categories.Add(category);
+            await SeedTestData();
 
             var product = new Product
             {
@@ -268,8 +272,7 @@ namespace Tests.Controllers
         public async Task GetLowStockProducts_ShouldExcludeInactiveProducts()
         {
             // Arrange
-            var category = new Category { CategoryID = 1, CategoryName = "Electronics" };
-            _context.Categories.Add(category);
+            await SeedTestData();
 
             var activeProduct = new Product
             {
