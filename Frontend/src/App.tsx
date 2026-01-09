@@ -42,7 +42,7 @@ function App() {
     <div className="app-shell">
       <header className="app-header">
         <div className="brand">
-          <Link to={isAdmin ? '/admin' : isCompanyOwner ? '/company-owner' : '/products'} className="logo">
+          <Link to={isAdmin ? '/admin' : isCompanyOwner ? '/company-owner' : isProductManager ? '/product-manager' : '/products'} className="logo">
             {t('site_name')}
           </Link>
         </div>
@@ -50,7 +50,7 @@ function App() {
         {(token || !isAdmin) && (
           <nav>
             <ul className="nav-links">
-              {!isAdmin && (
+              {!isAdmin && !isProductManager && !isCompanyOwner && (
                 <>
                   <li>
                     <Link to="/products">🛍️ {t('products')}</Link>
@@ -115,14 +115,18 @@ function App() {
                 ? `${t('welcome')}, ${user?.firstName}! 👋`
                 : isCompanyOwner
                   ? `${t('welcome')}, ${user?.firstName}! 📊`
-                  : `${t('welcome')}, ${user?.firstName}! 🛍️`}
+                  : isProductManager
+                    ? `${t('welcome')}, ${user?.firstName}! 📦`
+                    : `${t('welcome')}, ${user?.firstName}! 🛍️`}
             </h1>
             <p>
               {isAdmin
                 ? t('welcome_admin_message')
                 : isCompanyOwner
                   ? t('welcome_company_owner_message')
-                  : t('welcome_customer_message')}
+                  : isProductManager
+                    ? t('welcome_product_manager_message')
+                    : t('welcome_customer_message')}
             </p>
           </div>
         )}
@@ -132,18 +136,19 @@ function App() {
             <Navigate to={
               isAdmin ? '/admin' :
                 isCompanyOwner ? '/company-owner' :
-                  '/products'
+                  isProductManager ? '/product-manager' :
+                    '/products'
             } replace />
           } />
           <Route
             path="/products"
-            element={isAdmin ? <Navigate to="/admin" replace /> : <Products />}
+            element={isAdmin ? <Navigate to="/admin" replace /> : isProductManager ? <Navigate to="/product-manager" replace /> : isCompanyOwner ? <Navigate to="/company-owner" replace /> : <Products />}
           />
           <Route path="/products/:id" element={<ProductDetail />} />
           <Route element={<ProtectedRoute />}>
             <Route
               path="/cart"
-              element={isAdmin ? <Navigate to="/admin" replace /> : <CartPage />}
+              element={isAdmin ? <Navigate to="/admin" replace /> : isProductManager ? <Navigate to="/product-manager" replace /> : isCompanyOwner ? <Navigate to="/company-owner" replace /> : <CartPage />}
             />
             <Route path="/account" element={<AccountPage />} />
           </Route>

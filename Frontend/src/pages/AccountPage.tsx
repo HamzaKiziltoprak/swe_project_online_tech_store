@@ -16,6 +16,8 @@ const AccountPage = () => {
   const [loadingOrders, setLoadingOrders] = useState<boolean>(true);
   const [loadingReviews, setLoadingReviews] = useState<boolean>(true);
   const isAdmin = user?.roles?.includes('Admin');
+  const isProductManager = user?.roles?.includes('ProductManager');
+  const isCompanyOwner = user?.roles?.includes('CompanyOwner');
 
   // Profile Update State
   const [firstName, setFirstName] = useState('');
@@ -36,7 +38,7 @@ const AccountPage = () => {
   useEffect(() => {
     if (!token) return;
     refreshProfile();
-    if (!isAdmin) {
+    if (!isAdmin && !isProductManager && !isCompanyOwner) {
       api
         .getFavorites(token)
         .then((res) => setFavorites(res.items))
@@ -50,7 +52,7 @@ const AccountPage = () => {
         .then((res) => setMyReviews(res))
         .finally(() => setLoadingReviews(false));
     }
-  }, [token, isAdmin, refreshProfile]);
+  }, [token, isAdmin, isProductManager, isCompanyOwner, refreshProfile]);
 
   useEffect(() => {
     if (user) {
@@ -229,7 +231,7 @@ const AccountPage = () => {
         )}
       </section>
 
-      {!isAdmin && (
+      {!isAdmin && !isProductManager && !isCompanyOwner && (
         <>
           <section className="panel">
             <h3>⭐ {t('favorites_title')}</h3>
