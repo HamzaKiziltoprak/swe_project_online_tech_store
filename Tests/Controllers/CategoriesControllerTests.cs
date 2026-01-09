@@ -2,7 +2,6 @@ using Backend.Controllers;
 using Backend.Data;
 using Backend.DTOs;
 using Backend.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -15,7 +14,7 @@ using Xunit;
 
 namespace Tests.Controllers
 {
-    public class CategoriesControllerTests
+    public class CategoriesControllerTests : IDisposable
     {
         private readonly DataContext _context;
         private readonly Mock<ILogger<CategoriesController>> _mockLogger;
@@ -23,208 +22,348 @@ namespace Tests.Controllers
 
         public CategoriesControllerTests()
         {
-            // Testler için geçici ve izole bir veritabanı oluşturuluyor
+            // 1. InMemory DB Setup
             var options = new DbContextOptionsBuilder<DataContext>()
                 .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-                .EnableSensitiveDataLogging()
                 .Options;
-            _context = new DataContext(options);
 
-            // Controller'ın logger bağımlılığı için mock nesne oluşturuluyor
+            _context = new DataContext(options);
             _mockLogger = new Mock<ILogger<CategoriesController>>();
 
-            // Controller test ortamında gerçek DB yerine InMemory DB ve mock logger ile çalışıyor
-            _controller = new CategoriesController(
-                _context,
-                _mockLogger.Object
-            );
+            // 2. Seed Data
+            SeedDatabase();
+
+            // 3. Controller Setup
+            _controller = new CategoriesController(_context, _mockLogger.Object);
         }
 
-        // Kategorilerin hiyerarşik yapıda doğru döndüğü senaryo test ediliyor
-        [Fact]
-        public async Task GetCategories_ShouldReturnRootCategoriesWithSubCategories()
+        public void Dispose()
         {
-            // Test verisi: iki ana kategori, bir alt kategori
-            var root1 = new Category { CategoryID = 1, CategoryName = "Electronics", ParentCategoryID = null };
-            var root2 = new Category { CategoryID = 2, CategoryName = "Clothing", ParentCategoryID = null };
-            var sub1 = new Category { CategoryID = 3, CategoryName = "Laptops", ParentCategoryID = 1 };
+            _context.Database.EnsureDeleted();
+            _context.Dispose();
+        }
 
-            _context.Categories.Add(root1);
-            _context.Categories.Add(root2);
-            _context.Categories.Add(sub1);
-            await _context.SaveChangesAsync();
+        private void SeedDatabase()
+        {
+            // Parent Categories
+            var electronics = new Category { CategoryID = 1, CategoryName = "Electronics" };
+            var clothing = new Category { CategoryID = 2, CategoryName = "Clothing" };
 
-            // Controller çağrılıyor
+            // Sub Categories
+            var laptops = new Category { CategoryID = 3, CategoryName = "Laptops", ParentCategoryID = 1, ParentCategory = electronics };
+            var phones = new Category { CategoryID = 4, CategoryName = "Phones", ParentCategoryID = 1, ParentCategory = electronics };
+
+            // Products
+            var product1 = new Product { ProductID = 1, ProductName = "MacBook", CategoryID = 3, Category = laptops, Description = "Desc", ImageUrl = "url" };
+            
+            _context.Categories.AddRange(electronics, clothing, laptops, phones);
+            _context.Products.Add(product1);
+            _context.SaveChanges();
+        }
+
+        #region GetCategories Tests
+
+        [Fact]
+        public async Task GetCategories_ShouldReturnOnlyParentCategories_WithSubCategories()
+        {
+            // Act
             var result = await _controller.GetCategories();
 
-            // Dönen cevabın türü kontrol ediliyor
-            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
-            var apiResponse = Assert.IsType<ApiResponse<List<CategoryDetailDto>>>(actionResult.Value);
-
-            // Sadece üst seviye kategoriler dönmeli
-            Assert.Equal(2, apiResponse.Data.Count);
-
-            // Elektronik kategorisinin alt kategorisi doğru geliyor mu
-            var electronics = apiResponse.Data.FirstOrDefault(c => c.CategoryName == "Electronics");
-            Assert.NotNull(electronics);
-            Assert.Single(electronics.SubCategories);
-            Assert.Equal("Laptops", electronics.SubCategories[0].CategoryName);
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            var response = Assert.IsType<ApiResponse<List<CategoryDetailDto>>>(okResult.Value);
+            
+            Assert.True(response!.Success);
+            
+            // Sadece ParentCategoryID == null olanlar gelmeli (Electronics, Clothing)
+            Assert.Equal(2, response.Data!.Count);
+            
+            var electronics = response.Data.First(c => c.CategoryName == "Electronics");
+            
+            // Electronics'in 2 alt kategorisi olmalı (Laptops, Phones)
+            Assert.Equal(2, electronics.SubCategories!.Count);
         }
 
-        // ID üzerinden kategori bulunduğu zaman doğru döndüğünü test ediyoruz
+        #endregion
+
+        #region GetCategoryById Tests
+
         [Fact]
-        public async Task GetCategoryById_ShouldReturnCategory_WhenExists()
+        public async Task GetCategoryById_ShouldReturnCategoryDetail_WhenExists()
         {
-            // Test verisi: bir parent kategori ve ona bağlı bir child kategori
-            var parent = new Category { CategoryID = 10, CategoryName = "Parent" };
-            var child = new Category { CategoryID = 11, CategoryName = "Child", ParentCategoryID = 10 };
+            // Act
+            var result = await _controller.GetCategoryById(1); // Electronics
 
-            _context.Categories.AddRange(parent, child);
-            await _context.SaveChangesAsync();
-
-            // Controller çağrısı
-            var result = await _controller.GetCategoryById(11);
-
-            // Dönen response tipi kontrol ediliyor
-            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
-            var apiResponse = Assert.IsType<ApiResponse<CategoryDetailDto>>(actionResult.Value);
-
-            // Bilgiler doğru yansıtılıyor mu
-            Assert.Equal("Child", apiResponse.Data.CategoryName);
-            Assert.Equal("Parent", apiResponse.Data.ParentCategoryName);
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            var response = Assert.IsType<ApiResponse<CategoryDetailDto>>(okResult.Value);
+            
+            Assert.True(response!.Success);
+            Assert.Equal("Electronics", response.Data!.CategoryName);
+            Assert.Equal(2, response.Data.SubCategories!.Count);
         }
 
-        // ID olmayan bir kategori istenirse NotFound dönmesi bekleniyor
         [Fact]
-        public async Task GetCategoryById_ShouldReturnNotFound_WhenIdDoesNotExist()
+        public async Task GetCategoryById_ShouldReturnNotFound_WhenCategoryDoesNotExist()
         {
+            // Act
             var result = await _controller.GetCategoryById(99);
-            var actionResult = Assert.IsType<NotFoundObjectResult>(result.Result);
+
+            // Assert
+            var notFoundResult = Assert.IsType<NotFoundObjectResult>(result.Result);
+            var response = Assert.IsType<ApiResponse<CategoryDetailDto>>(notFoundResult.Value);
+            Assert.Equal("ID 99 ile kategori bulunamadı", response!.Message);
         }
 
-        // Yeni kategori başarıyla yaratılıyorsa CreatedAtAction dönmeli
+        #endregion
+
+        #region GetSubCategories Tests
+
+        [Fact]
+        public async Task GetSubCategories_ShouldReturnChildren_WhenParentExists()
+        {
+            // Act
+            var result = await _controller.GetSubCategories(1); // Electronics
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            var response = Assert.IsType<ApiResponse<List<CategoryDto>>>(okResult.Value);
+            
+            Assert.True(response!.Success);
+            Assert.Equal(2, response.Data!.Count); // Laptops, Phones
+            Assert.Equal("Electronics", response.Data[0].ParentCategoryName);
+        }
+
+        [Fact]
+        public async Task GetSubCategories_ShouldReturnNotFound_WhenParentDoesNotExist()
+        {
+            // Act
+            var result = await _controller.GetSubCategories(99);
+
+            // Assert
+            Assert.IsType<NotFoundObjectResult>(result.Result);
+        }
+
+        #endregion
+
+        #region CreateCategory Tests
+
         [Fact]
         public async Task CreateCategory_ShouldReturnCreated_WhenValid()
         {
-            var dto = new CreateCategoryDto { CategoryName = "New Cat" };
+            // Arrange
+            var dto = new CreateCategoryDto { CategoryName = "Home" };
 
+            // Act
             var result = await _controller.CreateCategory(dto);
 
-            var actionResult = Assert.IsType<CreatedAtActionResult>(result.Result);
-            var apiResponse = Assert.IsType<ApiResponse<CategoryDetailDto>>(actionResult.Value);
-
-            // API doğru isimle kategori oluşturmuş mu
-            Assert.Equal("New Cat", apiResponse.Data.CategoryName);
-
-            // Veritabanında gerçekten oluşturulup oluşturulmadığı kontrol ediliyor
-            var dbCat = await _context.Categories.FirstOrDefaultAsync(c => c.CategoryName == "New Cat");
-            Assert.NotNull(dbCat);
+            // Assert
+            var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
+            var response = Assert.IsType<ApiResponse<CategoryDetailDto>>(createdResult.Value);
+            
+            Assert.True(response!.Success);
+            Assert.Equal("Home", response.Data!.CategoryName);
+            
+            // DB Check
+            Assert.NotNull(await _context.Categories.FirstOrDefaultAsync(c => c.CategoryName == "Home"));
         }
 
-        // Zaten var olan kategori adı gönderildiğinde hata dönmesi bekleniyor
         [Fact]
         public async Task CreateCategory_ShouldReturnBadRequest_WhenNameExists()
         {
-            _context.Categories.Add(new Category { CategoryID = 1, CategoryName = "Existing" });
-            await _context.SaveChangesAsync();
+            // Arrange
+            var dto = new CreateCategoryDto { CategoryName = "Electronics" }; // Already exists
 
-            var dto = new CreateCategoryDto { CategoryName = "Existing" };
-
+            // Act
             var result = await _controller.CreateCategory(dto);
 
-            var actionResult = Assert.IsType<BadRequestObjectResult>(result.Result);
-            var apiResponse = Assert.IsType<ApiResponse<CategoryDetailDto>>(actionResult.Value);
-
-            Assert.Contains("zaten mevcut", apiResponse.Message);
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+            var response = Assert.IsType<ApiResponse<CategoryDetailDto>>(badRequestResult.Value);
+            Assert.Contains("zaten mevcut", response!.Message);
         }
 
-        // Ürünü olmayan bağımsız bir kategori silinebilmeli
         [Fact]
-        public async Task DeleteCategory_ShouldReturnOk_WhenCategoryIsIndependent()
+        public async Task CreateCategory_ShouldReturnBadRequest_WhenParentCategoryNotFound()
         {
-            _context.Categories.Add(new Category { CategoryID = 50, CategoryName = "Delete Me" });
+            // Arrange
+            var dto = new CreateCategoryDto { CategoryName = "Sub", ParentCategoryID = 99 };
+
+            // Act
+            var result = await _controller.CreateCategory(dto);
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+            Assert.Contains("ana kategori bulunamadı", ((ApiResponse<CategoryDetailDto>)badRequestResult.Value!).Message);
+        }
+
+        #endregion
+
+        #region UpdateCategory Tests
+
+        [Fact]
+        public async Task UpdateCategory_ShouldReturnOk_WhenUpdateSuccessful()
+        {
+            // Arrange
+            var dto = new UpdateCategoryDto { CategoryName = "Computers" };
+
+            // Act: Rename "Electronics" (ID 1) -> "Computers"
+            var result = await _controller.UpdateCategory(1, dto);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            var response = Assert.IsType<ApiResponse<CategoryDetailDto>>(okResult.Value);
+            
+            Assert.Equal("Computers", response!.Data!.CategoryName);
+            
+            // DB Check
+            var category = await _context.Categories.FindAsync(1);
+            Assert.Equal("Computers", category!.CategoryName);
+        }
+
+        [Fact]
+        public async Task UpdateCategory_ShouldReturnBadRequest_WhenSelfParenting()
+        {
+            // Arrange: Try to set ParentID = 1 for Category ID 1
+            var dto = new UpdateCategoryDto { CategoryName = "Electronics", ParentCategoryID = 1 };
+
+            // Act
+            var result = await _controller.UpdateCategory(1, dto);
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+            Assert.Contains("kendisinin ana kategorisi olamaz", ((ApiResponse<CategoryDetailDto>)badRequestResult.Value!).Message);
+        }
+
+        [Fact]
+        public async Task UpdateCategory_ShouldReturnBadRequest_WhenNameConflict()
+        {
+            // Arrange: Rename "Clothing" (ID 2) to "Electronics" (ID 1)
+            var dto = new UpdateCategoryDto { CategoryName = "Electronics" };
+
+            // Act
+            var result = await _controller.UpdateCategory(2, dto);
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+            Assert.Contains("başka kategori zaten mevcut", ((ApiResponse<CategoryDetailDto>)badRequestResult.Value!).Message);
+        }
+
+        #endregion
+
+        #region DeleteCategory Tests
+
+        [Fact]
+        public async Task DeleteCategory_ShouldReturnOk_WhenCategoryCanBeDeleted()
+        {
+            // Arrange
+            // Create a temporary empty category
+            var emptyCat = new Category { CategoryName = "Empty" };
+            _context.Categories.Add(emptyCat);
             await _context.SaveChangesAsync();
 
-            var result = await _controller.DeleteCategory(50);
+            // Act
+            var result = await _controller.DeleteCategory(emptyCat.CategoryID);
 
-            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
-            var apiResponse = Assert.IsType<ApiResponse<object>>(actionResult.Value);
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            var response = Assert.IsType<ApiResponse<object>>(okResult.Value);
+            Assert.True(response!.Success);
 
-            // İşlem başarılı mı
-            Assert.True(apiResponse.Success);
-
-            // Gerçekten veritabanından silinmiş mi
-            var dbCat = await _context.Categories.FindAsync(50);
-            Assert.Null(dbCat);
+            // DB Check
+            Assert.Null(await _context.Categories.FindAsync(emptyCat.CategoryID));
         }
 
-        // Ürünü olan bir kategori silinememeli
         [Fact]
         public async Task DeleteCategory_ShouldReturnBadRequest_WhenCategoryHasProducts()
         {
-            var cat = new Category { CategoryID = 60, CategoryName = "Has Products" };
-            _context.Categories.Add(cat);
+            // Arrange
+            // "Laptops" (ID 3) has products
+            
+            // Act
+            var result = await _controller.DeleteCategory(3);
 
-            _context.Products.Add(new Product
-            {
-                ProductID = 1,
-                ProductName = "P",
-                CategoryID = 60,
-                BrandID = 1,
-                Description = "D",
-                ImageUrl = "I",
-                Price = 10,
-                Stock = 1
-            });
-
-            await _context.SaveChangesAsync();
-
-            var result = await _controller.DeleteCategory(60);
-
-            var actionResult = Assert.IsType<BadRequestObjectResult>(result.Result);
-            var apiResponse = Assert.IsType<ApiResponse<object>>(actionResult.Value);
-
-            Assert.Contains("ürüne sahip olduğu için silinemez", apiResponse.Message);
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+            var response = Assert.IsType<ApiResponse<object>>(badRequestResult.Value);
+            Assert.Contains("ürüne sahip olduğu için silinemez", response!.Message);
         }
 
-        // Bir kategoriyi tamamen silerken tüm alt kategorilerin ve ürünlerin de silinmesi test ediliyor
         [Fact]
-        public async Task PermanentDeleteCategory_ShouldDeleteEverything_Recursively()
+        public async Task DeleteCategory_ShouldReturnBadRequest_WhenCategoryHasSubCategories()
         {
-            // Test yapısı: ana kategori, alt kategori, alt kategoriye bağlı ürün
-            var parent = new Category { CategoryID = 100, CategoryName = "Root" };
-            var sub = new Category { CategoryID = 101, CategoryName = "Sub", ParentCategoryID = 100 };
-            var product = new Product
-            {
-                ProductID = 500,
-                ProductName = "P",
-                CategoryID = 101,
-                BrandID = 1,
-                Description = "D",
-                ImageUrl = "I",
-                Price = 10,
-                Stock = 1
-            };
+            // Arrange
+            // "Electronics" (ID 1) has subcategories (Laptops, Phones)
 
-            _context.Categories.Add(parent);
-            _context.Categories.Add(sub);
-            _context.Products.Add(product);
-            await _context.SaveChangesAsync();
+            // Act
+            var result = await _controller.DeleteCategory(1);
 
-            // Tracking temizleniyor, veriler yeni yükleniyormuş gibi davranılması için
-            _context.ChangeTracker.Clear();
-
-            var result = await _controller.PermanentDeleteCategory(100);
-
-            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
-            var apiResponse = Assert.IsType<ApiResponse<object>>(actionResult.Value);
-
-            Assert.True(apiResponse.Success);
-
-            // Tüm öğelerin gerçekten silindiği kontrol ediliyor
-            Assert.Null(await _context.Categories.FindAsync(100));
-            Assert.Null(await _context.Categories.FindAsync(101));
-            Assert.Null(await _context.Products.FindAsync(500));
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+            var response = Assert.IsType<ApiResponse<object>>(badRequestResult.Value);
+            Assert.Contains("alt kategoriye sahip olduğu için silinemez", response!.Message);
         }
+
+        #endregion
+
+        #region PermanentDeleteCategory Tests
+
+        [Fact]
+        public async Task PermanentDeleteCategory_ShouldDeleteEverything_WhenCalled()
+        {
+            // Arrange
+            // Delete "Electronics" (ID 1) permanently. Should delete:
+            // 1. Electronics (Category)
+            // 2. Laptops, Phones (SubCategories)
+            // 3. Products in Laptops (MacBook)
+
+            // Act
+            var result = await _controller.PermanentDeleteCategory(1);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            var response = Assert.IsType<ApiResponse<object>>(okResult.Value);
+            Assert.True(response!.Success);
+
+            // Verifications
+            Assert.Null(await _context.Categories.FindAsync(1)); // Electronics
+            Assert.Null(await _context.Categories.FindAsync(3)); // Laptops
+            Assert.Null(await _context.Products.FindAsync(1));   // MacBook (Product in Laptops)
+        }
+
+        #endregion
+
+        #region SearchCategories Tests
+
+        [Fact]
+        public async Task SearchCategories_ShouldReturnMatchingCategories()
+        {
+            // Act
+            var result = await _controller.SearchCategories("lap"); // Should match "Laptops"
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            var response = Assert.IsType<ApiResponse<List<CategoryDto>>>(okResult.Value);
+            
+            Assert.True(response!.Success);
+            
+            // DÜZELTME: Null kontrolü ve veriye güvenli erişim
+            Assert.NotNull(response.Data);
+            Assert.Single(response.Data);
+            
+            Assert.Equal("Laptops", response.Data[0].CategoryName);
+        }
+
+        [Fact]
+        public async Task SearchCategories_ShouldReturnBadRequest_WhenTermIsEmpty()
+        {
+            // Act
+            var result = await _controller.SearchCategories("");
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(result.Result);
+        }
+
+        #endregion
     }
 }

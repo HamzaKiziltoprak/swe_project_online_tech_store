@@ -8,10 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System;
-using System.Collections.Generic;
 using System.Security.Claims;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Tests.Controllers
@@ -25,361 +22,25 @@ namespace Tests.Controllers
 
         public ReviewsControllerTests()
         {
-            // Test ortamı için hafızada çalışan bir veritabanı oluşturuyoruz.
-            // Her test yeni bir veritabanı ile başlıyor, böylece testler birbirini etkilemiyor.
             var options = new DbContextOptionsBuilder<DataContext>()
                 .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-                .EnableSensitiveDataLogging()
                 .Options;
+
             _context = new DataContext(options);
 
-            // UserManager yapısı dış servislere bağlı olduğu için mock'lanıyor.
             var userStore = new Mock<IUserStore<User>>();
-            _mockUserManager = new Mock<UserManager<User>>(
-                userStore.Object, null, null, null, null, null, null, null, null);
-
-            // Logger mock'lanıyor çünkü gerçek log yazma işlemine ihtiyacımız yok.
+            _mockUserManager = new Mock<UserManager<User>>(userStore.Object, null!, null!, null!, null!, null!, null!, null!, null!);
             _mockLogger = new Mock<ILogger<ReviewsController>>();
-
-            // Controller test için gerçek bağımlılıklarla değil, mock ve in memory db ile oluşturuluyor.
-            _controller = new ReviewsController(
-                _context,
-                _mockUserManager.Object,
-                _mockLogger.Object
-            );
+            _controller = new ReviewsController(_context, _mockUserManager.Object, _mockLogger.Object);
         }
 
-        // Ürün yorumlarını çeken fonksiyonun, ürün varsa doğru sonuç döndürüp döndürmediğini test eder.
-        [Fact]
-        public async Task GetProductReviews_ShouldReturnReviews_WhenProductExists()
-        {
-            // Test verisi olarak ürün ve iki yorum ekliyoruz.
-            var product = new Product { ProductID = 1, ProductName = "Phone", Price = 100, Stock=10, BrandID=1, Description="D", ImageUrl="I", IsActive=true };
-            _context.Products.Add(product);
-            
-            _context.ProductReviews.Add(new ProductReview { ReviewID = 1, ProductID = 1, UserID = 1, Rating = 5, Comment = "Good", ReviewDate = DateTime.UtcNow, IsApproved = true });
-            _context.ProductReviews.Add(new ProductReview { ReviewID = 2, ProductID = 1, UserID = 2, Rating = 3, Comment = "Okay", ReviewDate = DateTime.UtcNow, IsApproved = true });
-            await _context.SaveChangesAsync();
-
-            var filter = new ReviewFilterParams();
-
-            // Controller üzerinden yorumları çekiyoruz.
-            var result = await _controller.GetProductReviews(1, filter);
-
-            // Dönen cevabın başarılı olup olmadığını ve 2 yorum içerip içermediğini kontrol ediyoruz.
-            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
-            var apiResponse = Assert.IsType<ApiResponse<PagedReviewResult>>(actionResult.Value);
-            
-            Assert.True(apiResponse.Success);
-            Assert.Equal(2, apiResponse.Data.TotalCount);
-        }
-
-        // Rating filtresi çalışıyor mu test ediyoruz.
-        [Fact]
-        public async Task GetProductReviews_ShouldFilterByRating()
-        {
-            // Yorumun bir kullanıcıya ait olması gerektiği için kullanıcı ekliyoruz.
-            var user = new User { Id = 1, UserName = "User1", FirstName = "F", LastName = "L", Email = "e@m.com" };
-            _context.Users.Add(user);
-
-            // Ürün oluşturuyoruz.
-            var product = new Product { ProductID = 1, ProductName = "Phone", Price=10, Stock=1, BrandID=1, Description="D", ImageUrl="I", IsActive=true };
-            _context.Products.Add(product);
-            
-            // Aynı kullanıcı tarafından verilen iki farklı rating ekleniyor.
-            _context.ProductReviews.Add(new ProductReview { ReviewID = 1, ProductID = 1, UserID = 1, Rating = 5, Comment="Test", IsApproved = true });
-            _context.ProductReviews.Add(new ProductReview { ReviewID = 2, ProductID = 1, UserID = 1, Rating = 1, Comment="Test", IsApproved = true });
-            await _context.SaveChangesAsync();
-
-            var filter = new ReviewFilterParams { Rating = 5 };
-
-            // Rating filtresi uygulanmış şekilde yorumlar çekiliyor.
-            var result = await _controller.GetProductReviews(1, filter);
-
-            // Sadece rating değeri 5 olan yorum dönmeli.
-            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
-            var apiResponse = Assert.IsType<ApiResponse<PagedReviewResult>>(actionResult.Value);
-            
-            Assert.Single(apiResponse.Data.Reviews);
-            Assert.Equal(5, apiResponse.Data.Reviews[0].Rating);
-        }
-
-        // Bir kullanıcı satın aldığı ürüne yorum yapabilir mi test ediyoruz.
-        // NOT: Artık tüm yorumlar admin onayı gerektiriyor, bu yüzden IsApproved = false olacak.
-        [Fact]
-        public async Task CreateReview_ShouldReturnCreated_WhenUserHasPurchased()
-        {
-            // Sisteme giriş yapmış kullanıcıyı simüle ediyoruz.
-            var userId = 1;
-            var user = new User { Id = userId, UserName = "Reviewer" };
-            SetupHttpContextWithUser(userId);
-            _mockUserManager.Setup(x => x.FindByIdAsync(userId.ToString())).ReturnsAsync(user);
-
-            // Test ürünü oluşturuyoruz.
-            var product = new Product { ProductID = 10, ProductName = "Item", Price=10, Stock=1, BrandID=1, Description="D", ImageUrl="I", IsActive=true };
-            _context.Products.Add(product);
-
-            // Kullanıcının ürünü satın aldığı bir sipariş ekliyoruz.
-            var order = new Order { OrderID = 100, UserID = userId, Status = "Delivered", TotalAmount=10, ShippingAddress="Addr" };
-            _context.Orders.Add(order);
-            _context.OrderItems.Add(new OrderItem { OrderItemID = 1, OrderID = 100, ProductID = 10, Quantity = 1, UnitPrice=10 });
-            
-            await _context.SaveChangesAsync();
-            _context.ChangeTracker.Clear();
-
-            // Yeni yorum DTO'su oluşturuyoruz.
-            var dto = new CreateReviewDto { Rating = 5, ReviewText = "Amazing!" };
-
-            // Yorum oluşturma isteği gönderiliyor.
-            var result = await _controller.CreateReview(10, dto);
-
-            // Yorumun başarıyla oluştuğunu kontrol ediyoruz.
-            // Not: Artık tüm yeni yorumlar IsApproved = false ile oluşturulur (moderasyon sistemi)
-            var actionResult = Assert.IsType<CreatedAtActionResult>(result.Result);
-            var apiResponse = Assert.IsType<ApiResponse<ReviewDto>>(actionResult.Value);
-
-            Assert.True(apiResponse.Success);
-            Assert.False(apiResponse.Data.IsVerifiedPurchase); // Moderasyon sistemi: Tüm yorumlar onay bekler
-        }
-
-        // Aynı kullanıcı aynı ürüne ikinci kez yorum atınca hata dönmesi bekleniyor.
-        [Fact]
-        public async Task CreateReview_ShouldReturnBadRequest_WhenAlreadyReviewed()
-        {
-            // Giriş yapan kullanıcıyı ayarlıyoruz.
-            var userId = 2;
-            var user = new User { Id = userId };
-            SetupHttpContextWithUser(userId);
-            _mockUserManager.Setup(x => x.FindByIdAsync(userId.ToString())).ReturnsAsync(user);
-
-            // Ürün ekleniyor.
-            var product = new Product { ProductID = 20, ProductName="P", Price=10, Stock=1, BrandID=1, Description="D", ImageUrl="I", IsActive=true };
-            _context.Products.Add(product);
-            
-            // Daha önce atılmış yorum ekleniyor.
-            _context.ProductReviews.Add(new ProductReview { ReviewID = 1, ProductID = 20, UserID = userId, Rating = 4, Comment = "Test" });
-            await _context.SaveChangesAsync();
-
-            var dto = new CreateReviewDto { Rating = 5 };
-
-            // Yeni yorum denemesi yapılıyor.
-            var result = await _controller.CreateReview(20, dto);
-
-            // BadRequest bekleniyor çünkü kullanıcı zaten yorum yapmış.
-            var actionResult = Assert.IsType<BadRequestObjectResult>(result.Result);
-            var apiResponse = Assert.IsType<ApiResponse<ReviewDto>>(actionResult.Value);
-            
-            Assert.Contains("already reviewed", apiResponse.Message);
-        }
-
-        // Kullanıcı kendi yorumunu güncelleyebiliyor mu test ediyoruz.
-        [Fact]
-        public async Task UpdateReview_ShouldReturnOk_WhenUserOwnsReview()
-        {
-            // Kullanıcı login ediliyor.
-            var userId = 3;
-            SetupHttpContextWithUser(userId);
-
-            // Kullanıcı ve ürün test için ekleniyor.
-            var user = new User { Id = userId, UserName = "Reviewer", FirstName = "F", LastName = "L", Email = "e@m.com" };
-            _context.Users.Add(user);
-            
-            var product = new Product { ProductID = 1, ProductName = "P", Price=10, Stock=1, BrandID=1, Description="D", ImageUrl="I", IsActive=true };
-            _context.Products.Add(product);
-
-            // Kullanıcıya ait bir yorum ekliyoruz.
-            var review = new ProductReview { ReviewID = 50, ProductID = 1, UserID = userId, Rating = 3, Comment = "Old" };
-            _context.ProductReviews.Add(review);
-            await _context.SaveChangesAsync();
-
-            // Yeni içerik DTO'su
-            var dto = new UpdateReviewDto { Rating = 5, ReviewText = "New" };
-
-            // Yorum güncelleniyor.
-            var result = await _controller.UpdateReview(1, 50, dto);
-
-            // Yeni yorumun doğru şekilde güncellenip güncellenmediğini test ediyoruz.
-            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
-            var apiResponse = Assert.IsType<ApiResponse<ReviewDto>>(actionResult.Value);
-            
-            Assert.Equal("New", apiResponse.Data.ReviewText);
-            Assert.Equal(5, apiResponse.Data.Rating);
-        }
-
-        // Kullanıcı kendine ait olmayan bir yorumu güncellemeye çalışırsa hata dönmeli.
-        [Fact]
-        public async Task UpdateReview_ShouldReturnForbid_WhenUserDoesNotOwnReview()
-        {
-            // Giriş yapan kullanıcı id’si
-            var userId = 4;
-            var otherUserId = 5;
-            SetupHttpContextWithUser(userId);
-
-            // Sisteme başka bir kullanıcı ekliyoruz (yorum onun)
-            var otherUser = new User { Id = otherUserId, UserName = "Other", FirstName = "F", LastName = "L", Email = "e@m.com" };
-            _context.Users.Add(otherUser);
-
-            var product = new Product { ProductID = 1, ProductName = "P", Price=10, Stock=1, BrandID=1, Description="D", ImageUrl="I", IsActive=true };
-            _context.Products.Add(product);
-
-            // Yorum başka kullanıcıya ait
-            var review = new ProductReview { ReviewID = 60, ProductID = 1, UserID = otherUserId, Rating = 3, Comment = "Test" }; 
-            _context.ProductReviews.Add(review);
-            await _context.SaveChangesAsync();
-
-            var dto = new UpdateReviewDto { Rating = 5 };
-
-            // Giriş yapan kullanıcı başkasının yorumunu güncellemeye çalışıyor.
-            var result = await _controller.UpdateReview(1, 60, dto);
-
-            // Yetkisiz işlem olduğu için Forbid dönmesi bekleniyor.
-            Assert.IsType<ForbidResult>(result.Result);
-        }
-
-        // Bir çalışan yorum onayladığında çalışma mantığının doğruluğunu test eder.
-        [Fact]
-        public async Task ApproveReview_ShouldReturnOk_WhenUserIsEmployee()
-        {
-            // Test için gerekli temel verileri oluşturuyoruz.
-            var reviewId = 70;
-            var productId = 1;
-            var userId = 10;
-
-            var user = new User { Id = userId, UserName = "Reviewer", FirstName = "F", LastName = "L", Email = "e@m.com" };
-            _context.Users.Add(user);
-
-            var product = new Product { ProductID = productId, ProductName = "P", Price=10, Stock=1, BrandID=1, Description="D", ImageUrl="I", IsActive=true };
-            _context.Products.Add(product);
-
-            var review = new ProductReview { ReviewID = reviewId, ProductID = productId, UserID = userId, IsApproved = false, Comment = "Test" };
-            _context.ProductReviews.Add(review);
-            await _context.SaveChangesAsync();
-
-            // Yorumun onaylanması isteniyor.
-            var result = await _controller.ApproveReview(productId, reviewId);
-
-            // Yorum onaylandı mı kontrol ediyoruz.
-            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
-            var apiResponse = Assert.IsType<ApiResponse<ReviewDto>>(actionResult.Value);
-            
-            Assert.True(apiResponse.Data.IsVerifiedPurchase);
-
-            // Veritabanında gerçekten onaylı hale gelip gelmediğini doğruluyoruz.
-            var dbReview = await _context.ProductReviews.FindAsync(reviewId);
-            Assert.True(dbReview.IsApproved);
-        }
-
-        [Fact]
-        public async Task RejectReview_ShouldDeleteReview()
-        {
-            // Arrange
-            var productId = 1;
-            var reviewId = 1;
-            var userId = 1;
-
-            var user = new User { Id = userId, UserName = "testuser", FirstName = "Test", LastName = "User" };
-            _context.Users.Add(user);
-
-            var product = new Product { ProductID = productId, ProductName = "Test Product", Price = 100, Stock = 10, BrandID = 1, Description = "Test", ImageUrl = "test.jpg" };
-            _context.Products.Add(product);
-
-            var review = new ProductReview { ReviewID = reviewId, ProductID = productId, UserID = userId, IsApproved = false, Comment = "Test" };
-            _context.ProductReviews.Add(review);
-            await _context.SaveChangesAsync();
-
-            // Act
-            var result = await _controller.RejectReview(productId, reviewId);
-
-            // Assert
-            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
-            var apiResponse = Assert.IsType<ApiResponse<string>>(actionResult.Value);
-            Assert.True(apiResponse.Success);
-
-            // Veritabanından silindiğini kontrol et
-            var dbReview = await _context.ProductReviews.FindAsync(reviewId);
-            Assert.Null(dbReview);
-        }
-
-        [Fact]
-        public async Task RejectReview_ShouldReturnNotFound_WhenReviewDoesNotExist()
-        {
-            // Arrange
-            var productId = 1;
-            var reviewId = 999;
-
-            // Act
-            var result = await _controller.RejectReview(productId, reviewId);
-
-            // Assert
-            var actionResult = Assert.IsType<NotFoundObjectResult>(result.Result);
-            var apiResponse = Assert.IsType<ApiResponse<string>>(actionResult.Value);
-            Assert.False(apiResponse.Success);
-        }
-
-        [Fact]
-        public async Task GetPendingReviews_ShouldReturnOnlyUnapprovedReviews()
-        {
-            // Arrange
-            var userId = 1;
-            var productId = 1;
-
-            var user = new User { Id = userId, UserName = "testuser", FirstName = "Test", LastName = "User" };
-            _context.Users.Add(user);
-
-            var product = new Product { ProductID = productId, ProductName = "Test Product", Price = 100, Stock = 10, BrandID = 1, Description = "Test", ImageUrl = "test.jpg" };
-            _context.Products.Add(product);
-
-            var approvedReview = new ProductReview { ReviewID = 1, ProductID = productId, UserID = userId, IsApproved = true, Comment = "Approved", Rating = 5 };
-            var pendingReview1 = new ProductReview { ReviewID = 2, ProductID = productId, UserID = userId, IsApproved = false, Comment = "Pending 1", Rating = 4 };
-            var pendingReview2 = new ProductReview { ReviewID = 3, ProductID = productId, UserID = userId, IsApproved = false, Comment = "Pending 2", Rating = 3 };
-
-            _context.ProductReviews.AddRange(approvedReview, pendingReview1, pendingReview2);
-            await _context.SaveChangesAsync();
-
-            // Act
-            var result = await _controller.GetPendingReviews();
-
-            // Assert
-            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
-            var apiResponse = Assert.IsType<ApiResponse<List<ReviewDto>>>(actionResult.Value);
-            Assert.True(apiResponse.Success);
-            Assert.Equal(2, apiResponse.Data.Count); // Sadece 2 bekleyen review olmalı
-            Assert.All(apiResponse.Data, r => Assert.False(r.IsVerifiedPurchase)); // Hepsi onaysız olmalı
-        }
-
-        [Fact]
-        public async Task GetPendingReviews_ShouldReturnEmptyList_WhenNoPendingReviews()
-        {
-            // Arrange
-            var userId = 1;
-            var productId = 1;
-
-            var user = new User { Id = userId, UserName = "testuser", FirstName = "Test", LastName = "User" };
-            _context.Users.Add(user);
-
-            var product = new Product { ProductID = productId, ProductName = "Test Product", Price = 100, Stock = 10, BrandID = 1, Description = "Test", ImageUrl = "test.jpg" };
-            _context.Products.Add(product);
-
-            var approvedReview = new ProductReview { ReviewID = 1, ProductID = productId, UserID = userId, IsApproved = true, Comment = "Approved", Rating = 5 };
-            _context.ProductReviews.Add(approvedReview);
-            await _context.SaveChangesAsync();
-
-            // Act
-            var result = await _controller.GetPendingReviews();
-
-            // Assert
-            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
-            var apiResponse = Assert.IsType<ApiResponse<List<ReviewDto>>>(actionResult.Value);
-            Assert.True(apiResponse.Success);
-            Assert.Empty(apiResponse.Data); // Bekleyen review yok
-        }
-
-        // Test içinde bir kullanıcıyı login etmiş gibi göstermek için kullanılan yardımcı fonksiyon.
-        private void SetupHttpContextWithUser(int userId)
+        private void MockUserLogin(int userId, string role = "Customer")
         {
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, userId.ToString()) 
+                new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+                new Claim(ClaimTypes.Role, role),
+                new Claim(ClaimTypes.Name, "TestUser")
             };
             var identity = new ClaimsIdentity(claims, "TestAuth");
             var claimsPrincipal = new ClaimsPrincipal(identity);
@@ -388,6 +49,362 @@ namespace Tests.Controllers
             {
                 HttpContext = new DefaultHttpContext { User = claimsPrincipal }
             };
+
+            var user = CreateValidUser(userId);
+            if (!_context.Users.Any(u => u.Id == userId))
+            {
+                _context.Users.Add(user);
+                _context.SaveChanges();
+            }
+
+            _mockUserManager.Setup(x => x.FindByIdAsync(userId.ToString()))
+                .ReturnsAsync(user);
+        }
+
+        private User CreateValidUser(int id)
+        {
+            return new User
+            {
+                Id = id,
+                UserName = $"User{id}",
+                Email = $"user{id}@test.com",
+                FirstName = "Test",
+                LastName = "User",
+                EmailConfirmed = true
+            };
+        }
+
+        private Product CreateValidProduct(int id)
+        {
+            return new Product
+            {
+                ProductID = id,
+                ProductName = $"Product {id}",
+                Description = "Test Description",
+                ImageUrl = "http://example.com/image.jpg",
+                Price = 100,
+                Stock = 10,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                Brand = new Brand { BrandID = 1, BrandName = "TestBrand", Description = "Desc", LogoUrl = "url" },
+                Category = new Category { CategoryID = 1, CategoryName = "TestCat" } 
+            };
+        }
+
+        private ProductReview CreateValidReview(int reviewId, int productId, int userId, int rating, bool isApproved)
+        {
+            return new ProductReview
+            {
+                ReviewID = reviewId,
+                ProductID = productId,
+                UserID = userId,
+                Rating = rating,
+                Comment = "Valid comment",
+                IsApproved = isApproved,
+                ReviewDate = DateTime.UtcNow
+            };
+        }
+
+        [Fact]
+        public async Task GetProductReviews_ShouldReturnOk_WhenProductExists()
+        {
+            var productId = 1;
+            var userId = 10;
+            
+            _context.Users.Add(CreateValidUser(userId));
+            _context.Products.Add(CreateValidProduct(productId));
+            _context.ProductReviews.Add(CreateValidReview(1, productId, userId, 5, true));
+            _context.ProductReviews.Add(CreateValidReview(2, productId, userId, 1, false));
+            await _context.SaveChangesAsync();
+
+            var result = await _controller.GetProductReviews(productId, new ReviewFilterParams { PageNumber = 1, PageSize = 10 });
+
+            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<PagedReviewResult>>(actionResult.Value);
+            
+            Assert.True(apiResponse.Success);
+            Assert.NotNull(apiResponse.Data);
+            Assert.Equal(1, apiResponse.Data!.TotalCount);
+        }
+
+        [Fact]
+        public async Task GetProductReviews_ShouldReturnNotFound_WhenProductDoesNotExist()
+        {
+            var result = await _controller.GetProductReviews(999, new ReviewFilterParams());
+
+            var actionResult = Assert.IsType<NotFoundObjectResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<PagedReviewResult>>(actionResult.Value);
+            Assert.False(apiResponse.Success);
+        }
+
+        [Fact]
+        public async Task GetProductReviewSummary_ShouldReturnCorrectStats()
+        {
+            var productId = 1;
+            _context.Products.Add(CreateValidProduct(productId));
+            _context.Users.AddRange(CreateValidUser(10), CreateValidUser(11), CreateValidUser(12));
+
+            _context.ProductReviews.AddRange(
+                CreateValidReview(1, productId, 10, 5, true),
+                CreateValidReview(2, productId, 11, 3, true),
+                CreateValidReview(3, productId, 12, 1, false)
+            );
+            await _context.SaveChangesAsync();
+
+            var result = await _controller.GetProductReviewSummary(productId);
+
+            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<ProductReviewSummaryDto>>(actionResult.Value);
+            
+            Assert.NotNull(apiResponse.Data);
+            Assert.Equal(4, apiResponse.Data!.AverageRating);
+            Assert.Equal(2, apiResponse.Data!.TotalReviews);
+        }
+
+        [Fact]
+        public async Task CreateReview_ShouldCreateReview_WhenValid()
+        {
+            var productId = 1;
+            var userId = 10;
+            MockUserLogin(userId);
+
+            _context.Products.Add(CreateValidProduct(productId));
+            await _context.SaveChangesAsync();
+
+            var dto = new CreateReviewDto { Rating = 5, ReviewText = "New Review" };
+
+            var result = await _controller.CreateReview(productId, dto);
+
+            var actionResult = Assert.IsType<CreatedAtActionResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<ReviewDto>>(actionResult.Value);
+            
+            Assert.True(apiResponse.Success);
+            Assert.NotNull(apiResponse.Data);
+            Assert.Equal(5, apiResponse.Data!.Rating);
+            
+            var dbReview = await _context.ProductReviews.FirstOrDefaultAsync();
+            Assert.NotNull(dbReview);
+            Assert.False(dbReview!.IsApproved);
+        }
+
+        [Fact]
+        public async Task CreateReview_ShouldReturnBadRequest_WhenAlreadyReviewed()
+        {
+            var productId = 1;
+            var userId = 10;
+            MockUserLogin(userId);
+
+            _context.Products.Add(CreateValidProduct(productId));
+            _context.ProductReviews.Add(CreateValidReview(1, productId, userId, 5, true));
+            await _context.SaveChangesAsync();
+
+            var dto = new CreateReviewDto { Rating = 4, ReviewText = "Spam" };
+
+            var result = await _controller.CreateReview(productId, dto);
+
+            var actionResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<ReviewDto>>(actionResult.Value);
+            Assert.Equal("You have already reviewed this product", apiResponse.Message);
+        }
+
+        [Fact]
+        public async Task UpdateReview_ShouldUpdate_WhenUserIsOwner()
+        {
+            var productId = 1;
+            var reviewId = 100;
+            var userId = 10;
+            MockUserLogin(userId);
+
+            _context.Products.Add(CreateValidProduct(productId));
+            _context.ProductReviews.Add(new ProductReview 
+            { 
+                ReviewID = reviewId, 
+                ProductID = productId, 
+                UserID = userId, 
+                Rating = 3, 
+                Comment = "Old",
+                IsApproved = true,
+                ReviewDate = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+
+            var dto = new UpdateReviewDto { Rating = 5, ReviewText = "New" };
+
+            var result = await _controller.UpdateReview(productId, reviewId, dto);
+
+            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<ReviewDto>>(actionResult.Value);
+            
+            Assert.NotNull(apiResponse.Data);
+            Assert.Equal(5, apiResponse.Data!.Rating);
+            Assert.Equal("New", apiResponse.Data!.ReviewText);
+        }
+
+        [Fact]
+        public async Task UpdateReview_ShouldReturnForbid_WhenUserIsNotOwner()
+        {
+            var productId = 1;
+            var reviewId = 100;
+            var userId = 10;
+            var otherUserId = 20;
+            
+            MockUserLogin(userId);
+            _context.Users.Add(CreateValidUser(otherUserId));
+            _context.Products.Add(CreateValidProduct(productId));
+
+            _context.ProductReviews.Add(CreateValidReview(reviewId, productId, otherUserId, 3, true));
+            await _context.SaveChangesAsync();
+
+            var dto = new UpdateReviewDto { Rating = 5, ReviewText = "Hack" };
+
+            var result = await _controller.UpdateReview(productId, reviewId, dto);
+
+            Assert.IsType<ForbidResult>(result.Result);
+        }
+
+        [Fact]
+        public async Task DeleteReview_ShouldDelete_WhenUserIsOwner()
+        {
+            var productId = 1;
+            var reviewId = 100;
+            var userId = 10;
+            MockUserLogin(userId);
+            
+            _context.Products.Add(CreateValidProduct(productId));
+            _context.ProductReviews.Add(CreateValidReview(reviewId, productId, userId, 5, true));
+            await _context.SaveChangesAsync();
+
+            var result = await _controller.DeleteReview(productId, reviewId);
+
+            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<object>>(actionResult.Value);
+            Assert.True(apiResponse.Success);
+            Assert.Null(await _context.ProductReviews.FindAsync(reviewId));
+        }
+
+        [Fact]
+        public async Task GetMyReviews_ShouldReturnOnlyUserReviews()
+        {
+            var userId = 10;
+            var otherUserId = 99;
+            MockUserLogin(userId);
+            _context.Users.Add(CreateValidUser(otherUserId));
+            _context.Products.Add(CreateValidProduct(1));
+            
+            _context.ProductReviews.AddRange(
+                CreateValidReview(1, 1, userId, 5, true),
+                CreateValidReview(2, 1, otherUserId, 1, true)
+            );
+            await _context.SaveChangesAsync();
+
+            var result = await _controller.GetMyReviews(new ReviewFilterParams());
+
+            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<PagedReviewResult>>(actionResult.Value);
+            
+            Assert.NotNull(apiResponse.Data);
+            Assert.Equal(1, apiResponse.Data!.TotalCount);
+            Assert.Equal(5, apiResponse.Data!.Reviews.First().Rating);
+        }
+
+        [Fact]
+        public async Task ApproveReview_ShouldApprove_WhenAdmin()
+        {
+            var productId = 1;
+            var reviewId = 100;
+            var userId = 10;
+            
+            MockUserLogin(1, "Admin");
+            
+            _context.Users.Add(CreateValidUser(userId));
+            _context.Products.Add(CreateValidProduct(productId));
+            _context.ProductReviews.Add(CreateValidReview(reviewId, productId, userId, 4, false));
+            await _context.SaveChangesAsync();
+
+            var result = await _controller.ApproveReview(productId, reviewId);
+
+            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<ReviewDto>>(actionResult.Value);
+            
+            Assert.NotNull(apiResponse.Data);
+            Assert.True(apiResponse.Data!.IsVerifiedPurchase);
+
+            var dbReview = await _context.ProductReviews.FindAsync(reviewId);
+            Assert.NotNull(dbReview);
+            Assert.True(dbReview!.IsApproved);
+        }
+
+        [Fact]
+        public async Task RejectReview_ShouldDeleteReview_WhenAdmin()
+        {
+            var productId = 1;
+            var reviewId = 100;
+            var userId = 10;
+            MockUserLogin(1, "Admin");
+            
+            _context.Users.Add(CreateValidUser(userId));
+            _context.Products.Add(CreateValidProduct(productId));
+            _context.ProductReviews.Add(CreateValidReview(reviewId, productId, userId, 4, false));
+            await _context.SaveChangesAsync();
+
+            var result = await _controller.RejectReview(productId, reviewId);
+
+            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<string>>(actionResult.Value);
+            Assert.Equal("Review başarıyla reddedildi", apiResponse.Message);
+            Assert.Null(await _context.ProductReviews.FindAsync(reviewId));
+        }
+
+        [Fact]
+        public async Task GetPendingReviews_ShouldReturnOnlyUnapproved()
+        {
+            MockUserLogin(1, "Admin");
+            _context.Products.Add(CreateValidProduct(1));
+            _context.Users.Add(CreateValidUser(10));
+            _context.Users.Add(CreateValidUser(11));
+            
+            _context.ProductReviews.AddRange(
+                CreateValidReview(1, 1, 10, 5, false),
+                CreateValidReview(2, 1, 11, 4, true)
+            );
+            await _context.SaveChangesAsync();
+
+            var result = await _controller.GetPendingReviews();
+
+            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<List<ReviewDto>>>(actionResult.Value);
+            
+            Assert.NotNull(apiResponse.Data);
+            Assert.Single(apiResponse.Data!);
+            Assert.Equal(1, apiResponse.Data!.First().ProductReviewID);
+        }
+
+        [Fact]
+        public async Task GetLatestReviews_ShouldReturnLatestApproved()
+        {
+            MockUserLogin(1, "Admin");
+            _context.Products.Add(CreateValidProduct(1));
+            _context.Users.AddRange(CreateValidUser(10), CreateValidUser(11), CreateValidUser(12));
+            
+            var r1 = CreateValidReview(1, 1, 10, 5, true);
+            r1.ReviewDate = DateTime.UtcNow.AddDays(-1);
+            
+            var r2 = CreateValidReview(2, 1, 11, 4, true);
+            r2.ReviewDate = DateTime.UtcNow;
+            
+            var r3 = CreateValidReview(3, 1, 12, 1, false);
+            
+            _context.ProductReviews.AddRange(r1, r2, r3);
+            await _context.SaveChangesAsync();
+
+            var result = await _controller.GetLatestReviews(10);
+
+            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<List<ReviewDto>>>(actionResult.Value);
+            
+            Assert.NotNull(apiResponse.Data);
+            Assert.Equal(2, apiResponse.Data!.Count);
+            Assert.Equal(2, apiResponse.Data!.First().ProductReviewID);
         }
     }
 }

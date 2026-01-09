@@ -9,311 +9,371 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Security.Claims;
+using Xunit;
 
 namespace Tests.Controllers
 {
     public class TransactionsControllerTests
     {
+        private readonly DataContext _context;
         private readonly Mock<UserManager<User>> _mockUserManager;
         private readonly Mock<ILogger<TransactionsController>> _mockLogger;
-        private readonly DataContext _context;
         private readonly TransactionsController _controller;
 
         public TransactionsControllerTests()
         {
             var options = new DbContextOptionsBuilder<DataContext>()
-                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()) // Her test için izole DB
+                .EnableSensitiveDataLogging()
                 .Options;
+
             _context = new DataContext(options);
 
-            // ===== MOCK DATA START - Testler için gerekli sahte veriler =====
-            // Bu bölüm testlerin çalışması için gereklidir
-            // Silmek isterseniz "MOCK DATA START" ile "MOCK DATA END" arasını silin
-            _context.Brands.Add(new Brand { BrandID = 1, BrandName = "Test Brand", Description = "Test Brand Description" });
-            _context.Categories.Add(new Category { CategoryID = 1, CategoryName = "Test Category" });
-            _context.SaveChanges();
-            // ===== MOCK DATA END =====
-
-            var userStoreMock = new Mock<IUserStore<User>>();
-            _mockUserManager = new Mock<UserManager<User>>(
-                userStoreMock.Object, null, null, null, null, null, null, null, null);
-
+            var userStore = new Mock<IUserStore<User>>();
+            _mockUserManager = new Mock<UserManager<User>>(userStore.Object, null!, null!, null!, null!, null!, null!, null!, null!);
             _mockLogger = new Mock<ILogger<TransactionsController>>();
-
             _controller = new TransactionsController(_context, _mockUserManager.Object, _mockLogger.Object);
         }
 
-        private void SetupUserClaims(string userId, string role = "Customer")
+        // --- HELPERS ---
+
+        private void MockUserLogin(int userId, string role = "Customer")
         {
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, userId),
-                new Claim(ClaimTypes.Role, role)
+                new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+                new Claim(ClaimTypes.Role, role),
+                new Claim(ClaimTypes.Name, $"User{userId}")
             };
-            var identity = new ClaimsIdentity(claims, "TestAuthType");
+            var identity = new ClaimsIdentity(claims, "TestAuth");
             var claimsPrincipal = new ClaimsPrincipal(identity);
+
             _controller.ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext { User = claimsPrincipal }
             };
+
+            // Mock UserManager setup (DB'ye dokunmaz, sadece UserManager davranışını taklit eder)
+            var userMock = CreateValidUser(userId);
+            _mockUserManager.Setup(x => x.FindByIdAsync(userId.ToString()))
+                .ReturnsAsync(userMock);
         }
 
-        [Fact]
-        public async Task GetMyTransactions_ReturnsUserTransactions_WhenAuthenticated()
+        private User CreateValidUser(int id)
         {
-            // Arrange
-            var user = new User
+            return new User
             {
-                Id = 1,
-                FirstName = "John",
-                LastName = "Doe",
-                Email = "john@test.com",
-                UserName = "john@test.com"
+                Id = id,
+                UserName = $"user{id}",
+                Email = $"user{id}@test.com",
+                FirstName = "Test",
+                LastName = "User", 
+                EmailConfirmed = true
             };
-            _context.Users.Add(user);
-
-            var order = new Order
-            {
-                OrderID = 1,
-                UserID = 1,
-                TotalAmount = 100m,
-                Status = "Completed",
-                ShippingAddress = "Test Address",
-                OrderDate = DateTime.UtcNow
-            };
-            _context.Orders.Add(order);
-
-            var transaction = new Transaction
-            {
-                TransactionID = 1,
-                TransactionType = "Purchase",
-                Amount = 100m,
-                Status = "Completed",
-                OrderID = 1,
-                UserID = 1,
-                TransactionDate = DateTime.UtcNow
-            };
-            _context.Transactions.Add(transaction);
-            await _context.SaveChangesAsync();
-
-            SetupUserClaims("1");
-
-            // Act
-            var result = await _controller.GetMyTransactions(1, 10);
-
-            // Assert
-            var okResult = Assert.IsType<OkObjectResult>(result.Result);
-            var response = Assert.IsType<ApiResponse<PagedTransactionResult>>(okResult.Value);
-            Assert.True(response.Success);
-            Assert.Single(response.Data!.Data);
-            Assert.Equal(100m, response.Data.Data[0].Amount);
         }
 
-        [Fact]
-        public async Task GetTransaction_ReturnsTransaction_WhenUserOwnsIt()
+        private Order CreateValidOrder(int orderId, int userId)
         {
-            // Arrange
-            var user = new User
+            return new Order
             {
-                Id = 1,
-                FirstName = "John",
-                LastName = "Doe",
-                Email = "john@test.com",
-                UserName = "john@test.com"
-            };
-            _context.Users.Add(user);
-
-            var order = new Order
-            {
-                OrderID = 1,
-                UserID = 1,
-                TotalAmount = 100m,
+                OrderID = orderId,
+                UserID = userId,
+                OrderDate = DateTime.UtcNow,
                 Status = "Completed",
-                ShippingAddress = "Test Address",
-                OrderDate = DateTime.UtcNow
+                TotalAmount = 100,
+                ShippingAddress = "Test Address 123"
             };
-            _context.Orders.Add(order);
+        }
 
-            var transaction = new Transaction
+        private Transaction CreateValidTransaction(int id, int orderId, int userId, string type = "Purchase", decimal amount = 100, string status = "Completed")
+        {
+            return new Transaction
             {
-                TransactionID = 1,
-                TransactionType = "Purchase",
-                Amount = 100m,
-                Status = "Completed",
-                OrderID = 1,
-                UserID = 1,
+                TransactionID = id,
+                OrderID = orderId,
+                UserID = userId,
+                TransactionType = type,
+                Amount = amount,
+                Status = status,
                 TransactionDate = DateTime.UtcNow,
-                Description = "Test transaction"
+                Description = "Test Transaction"
             };
-            _context.Transactions.Add(transaction);
-            await _context.SaveChangesAsync();
+        }
 
-            SetupUserClaims("1");
+        // --- TESTLER ---
+
+        [Fact]
+        public async Task GetAllTransactions_ShouldReturnFilteredResult_WhenAdmin()
+        {
+            // Arrange
+            var adminId = 1;
+            var userId = 10;
+            
+            MockUserLogin(adminId, "Admin");
+            
+            // 1. User ve Order'ı ekle ve kaydet
+            _context.Users.Add(CreateValidUser(userId));
+            _context.Orders.Add(CreateValidOrder(100, userId));
+            await _context.SaveChangesAsync();
+            
+            // Context'i temizle ki User/Order referansları cache'de kalmasın
+            _context.ChangeTracker.Clear();
+
+            // 2. Transaction'ları SADECE ID REFERANSLARI ile ekle (Navigation Property atamadan)
+            var t1 = CreateValidTransaction(1, 100, userId, "Purchase", 100, "Completed");
+            var t2 = CreateValidTransaction(2, 100, userId, "Refund", 50, "Completed");
+
+            _context.Transactions.AddRange(t1, t2);
+            await _context.SaveChangesAsync();
+            
+            // Context'i tekrar temizle (Controller taze veri çeksin)
+            _context.ChangeTracker.Clear();
+
+            var filter = new TransactionFilterParams 
+            { 
+                TransactionType = "Purchase", 
+                Page = 1, 
+                PageSize = 10,
+                SortBy = "TransactionDate",
+                SortOrder = "Desc"
+            };
 
             // Act
-            var result = await _controller.GetTransaction(1);
+            var result = await _controller.GetAllTransactions(filter);
 
             // Assert
-            var okResult = Assert.IsType<OkObjectResult>(result.Result);
-            var response = Assert.IsType<ApiResponse<TransactionDetailDto>>(okResult.Value);
-            Assert.True(response.Success);
-            Assert.Equal(1, response.Data!.TransactionID);
-            Assert.Equal("Purchase", response.Data.TransactionType);
-            Assert.Equal(100m, response.Data.Amount);
+            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<PagedTransactionResult>>(actionResult.Value);
+            
+            Assert.True(apiResponse.Success);
+            Assert.NotNull(apiResponse.Data);
+            Assert.Equal(1, apiResponse.Data!.TotalCount); 
+            Assert.Equal("Purchase", apiResponse.Data!.Data.First().TransactionType);
         }
 
         [Fact]
-        public async Task GetTransaction_ReturnsForbidden_WhenUserDoesNotOwnTransaction()
+        public async Task GetMyTransactions_ShouldReturnOnlyUserTransactions()
         {
             // Arrange
-            var user1 = new User { Id = 1, FirstName = "John", LastName = "Doe", Email = "john@test.com", UserName = "john@test.com" };
-            var user2 = new User { Id = 2, FirstName = "Jane", LastName = "Smith", Email = "jane@test.com", UserName = "jane@test.com" };
-            _context.Users.AddRange(user1, user2);
+            var userId = 10;
+            var otherUserId = 11;
+            
+            MockUserLogin(userId); 
 
-            var order = new Order
-            {
-                OrderID = 1,
-                UserID = 1,
-                TotalAmount = 100m,
-                Status = "Completed",
-                ShippingAddress = "Test Address",
-                OrderDate = DateTime.UtcNow
-            };
-            _context.Orders.Add(order);
-
-            var transaction = new Transaction
-            {
-                TransactionID = 1,
-                TransactionType = "Purchase",
-                Amount = 100m,
-                Status = "Completed",
-                OrderID = 1,
-                UserID = 1,
-                TransactionDate = DateTime.UtcNow
-            };
-            _context.Transactions.Add(transaction);
+            // User ve Order ekle
+            _context.Users.AddRange(CreateValidUser(userId), CreateValidUser(otherUserId));
+            _context.Orders.AddRange(CreateValidOrder(100, userId), CreateValidOrder(101, otherUserId));
             await _context.SaveChangesAsync();
+            _context.ChangeTracker.Clear();
 
-            SetupUserClaims("2"); // Different user
+            // Transaction ekle (Sadece FK ile)
+            _context.Transactions.AddRange(
+                CreateValidTransaction(1, 100, userId, "Purchase", 100),
+                CreateValidTransaction(2, 101, otherUserId, "Purchase", 200) 
+            );
+            await _context.SaveChangesAsync();
+            _context.ChangeTracker.Clear();
 
             // Act
-            var result = await _controller.GetTransaction(1);
+            var result = await _controller.GetMyTransactions();
+
+            // Assert
+            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<PagedTransactionResult>>(actionResult.Value);
+            
+            Assert.NotNull(apiResponse.Data);
+            Assert.Equal(1, apiResponse.Data!.TotalCount);
+            Assert.Equal(userId, apiResponse.Data!.Data.First().UserID);
+        }
+
+        [Fact]
+        public async Task GetTransaction_ShouldReturnDetails_WhenUserIsOwner()
+        {
+            // Arrange
+            var userId = 10;
+            var transId = 1;
+            
+            MockUserLogin(userId); 
+
+            _context.Users.Add(CreateValidUser(userId));
+            _context.Orders.Add(CreateValidOrder(100, userId));
+            await _context.SaveChangesAsync();
+            _context.ChangeTracker.Clear();
+
+            _context.Transactions.Add(CreateValidTransaction(transId, 100, userId)); 
+            await _context.SaveChangesAsync();
+            _context.ChangeTracker.Clear();
+
+            // Act
+            var result = await _controller.GetTransaction(transId);
+
+            // Assert
+            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<TransactionDetailDto>>(actionResult.Value);
+            
+            Assert.NotNull(apiResponse.Data);
+            Assert.Equal(transId, apiResponse.Data!.TransactionID);
+        }
+
+        [Fact]
+        public async Task GetTransaction_ShouldReturnForbid_WhenUserIsNotOwner()
+        {
+            // Arrange
+            var userId = 10; 
+            var ownerId = 20; 
+            var transId = 1;
+            
+            MockUserLogin(userId); 
+
+            _context.Users.Add(CreateValidUser(ownerId));
+            _context.Orders.Add(CreateValidOrder(100, ownerId));
+            await _context.SaveChangesAsync();
+            _context.ChangeTracker.Clear();
+
+            _context.Transactions.Add(CreateValidTransaction(transId, 100, ownerId));
+            await _context.SaveChangesAsync();
+            _context.ChangeTracker.Clear();
+
+            // Act
+            var result = await _controller.GetTransaction(transId);
 
             // Assert
             Assert.IsType<ForbidResult>(result.Result);
         }
 
         [Fact]
-        public async Task GetStatistics_ReturnsCorrectStatistics_ForAdmin()
+        public async Task GetTransaction_ShouldReturnSuccess_WhenAdminAccessingOthers()
         {
             // Arrange
-            var user = new User { Id = 1, FirstName = "Admin", LastName = "User", Email = "admin@test.com", UserName = "admin@test.com" };
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            var adminId = 1;
+            var ownerId = 20;
+            var transId = 1;
+            
+            MockUserLogin(adminId, "Admin"); 
 
-            var order1 = new Order { OrderID = 1, UserID = 1, TotalAmount = 100m, Status = "Completed", ShippingAddress = "Test", OrderDate = DateTime.UtcNow };
-            var order2 = new Order { OrderID = 2, UserID = 1, TotalAmount = 50m, Status = "Completed", ShippingAddress = "Test", OrderDate = DateTime.UtcNow };
-            _context.Orders.AddRange(order1, order2);
+            _context.Users.Add(CreateValidUser(ownerId));
+            _context.Orders.Add(CreateValidOrder(100, ownerId));
             await _context.SaveChangesAsync();
+            _context.ChangeTracker.Clear();
 
-            // Two Purchase transactions (100 + 50 = 150) and one Refund (25)
-            var transactions = new List<Transaction>
-            {
-                new Transaction { TransactionID = 1, TransactionType = "Purchase", Amount = 100m, Status = "Completed", OrderID = 1, UserID = 1, TransactionDate = DateTime.UtcNow },
-                new Transaction { TransactionID = 2, TransactionType = "Purchase", Amount = 50m, Status = "Completed", OrderID = 2, UserID = 1, TransactionDate = DateTime.UtcNow },
-                new Transaction { TransactionID = 3, TransactionType = "Refund", Amount = 25m, Status = "Completed", OrderID = 1, UserID = 1, TransactionDate = DateTime.UtcNow }
-            };
-            _context.Transactions.AddRange(transactions);
+            _context.Transactions.Add(CreateValidTransaction(transId, 100, ownerId));
             await _context.SaveChangesAsync();
-
-            SetupUserClaims("1", "Admin");
+            _context.ChangeTracker.Clear();
 
             // Act
-            var result = await _controller.GetStatistics(null, null);
+            var result = await _controller.GetTransaction(transId);
 
             // Assert
-            var okResult = Assert.IsType<OkObjectResult>(result.Result);
-            var response = Assert.IsType<ApiResponse<TransactionStatisticsDto>>(okResult.Value);
-            Assert.True(response.Success);
-            // Verify we get a valid response with transactions
-            Assert.NotNull(response.Data);
-            Assert.True(response.Data!.TotalTransactions > 0);
+            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<TransactionDetailDto>>(actionResult.Value);
+            Assert.True(apiResponse.Success);
         }
 
         [Fact]
-        public async Task CreateTransaction_CreatesSuccessfully_WhenAdmin()
+        public async Task GetStatistics_ShouldReturnCorrectCalculations()
         {
             // Arrange
-            var user = new User { Id = 1, FirstName = "Admin", LastName = "User", Email = "admin@test.com", UserName = "admin@test.com" };
-            _context.Users.Add(user);
-
-            var order = new Order { OrderID = 1, UserID = 1, TotalAmount = 100m, Status = "Completed", ShippingAddress = "Test", OrderDate = DateTime.UtcNow };
-            _context.Orders.Add(order);
+            MockUserLogin(1, "Admin");
+            var userId = 10;
+            
+            _context.Users.Add(CreateValidUser(userId));
             await _context.SaveChangesAsync();
+            _context.ChangeTracker.Clear();
 
-            SetupUserClaims("1", "Admin");
+            _context.Transactions.AddRange(
+                CreateValidTransaction(1, 100, userId, "Purchase", 100, "Completed"),
+                CreateValidTransaction(2, 100, userId, "Purchase", 200, "Completed"),
+                CreateValidTransaction(3, 100, userId, "Refund", 50, "Completed"),
+                CreateValidTransaction(4, 100, userId, "Purchase", 500, "Failed") 
+            );
+            await _context.SaveChangesAsync();
+            _context.ChangeTracker.Clear();
 
-            _mockUserManager.Setup(x => x.FindByIdAsync("1"))
-                .ReturnsAsync(user);
+            // Act
+            var result = await _controller.GetStatistics();
 
-            var createDto = new CreateTransactionDto
+            // Assert
+            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<TransactionStatisticsDto>>(actionResult.Value);
+            
+            var stats = apiResponse.Data!;
+            Assert.Equal(300, stats.TotalRevenue); 
+            Assert.Equal(50, stats.TotalRefunds);
+            Assert.Equal(250, stats.NetRevenue); 
+            Assert.Equal(4, stats.TotalTransactions);
+            Assert.Equal(3, stats.SuccessfulTransactions);
+            Assert.Equal(1, stats.FailedTransactions);
+        }
+
+        [Fact]
+        public async Task CreateTransaction_ShouldCreate_WhenDataIsValid()
+        {
+            // Arrange
+            MockUserLogin(1, "Admin");
+            var userId = 10;
+            var orderId = 100;
+
+            _context.Users.Add(CreateValidUser(userId));
+            _context.Orders.Add(CreateValidOrder(orderId, userId));
+            await _context.SaveChangesAsync();
+            _context.ChangeTracker.Clear();
+
+            var dto = new CreateTransactionDto
             {
+                UserID = userId,
+                OrderID = orderId,
+                Amount = 150,
                 TransactionType = "Adjustment",
-                Amount = 10m,
-                Description = "Price adjustment",
-                OrderID = 1,
-                UserID = 1
+                Description = "Manual fix"
             };
 
+            // UserManager'ın FindByIdAsync çağrısını karşılaması için (Controller içinde kullanılıyor)
+            // MockUserLogin içinde 1 için ayarlanmıştı, burada 10 için de ayarlıyoruz.
+            _mockUserManager.Setup(x => x.FindByIdAsync(userId.ToString()))
+                .ReturnsAsync(CreateValidUser(userId));
+
             // Act
-            var result = await _controller.CreateTransaction(createDto);
+            var result = await _controller.CreateTransaction(dto);
 
             // Assert
-            var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
-            var response = Assert.IsType<ApiResponse<TransactionDto>>(createdResult.Value);
-            Assert.True(response.Success);
-            Assert.Equal("Adjustment", response.Data!.TransactionType);
-            Assert.Equal(10m, response.Data.Amount);
+            var actionResult = Assert.IsType<CreatedAtActionResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<TransactionDto>>(actionResult.Value);
+            
+            Assert.True(apiResponse.Success);
+            Assert.Equal(150, apiResponse.Data!.Amount);
+            
+            var dbTrans = await _context.Transactions.LastOrDefaultAsync();
+            Assert.NotNull(dbTrans);
+            Assert.Equal("Manual fix", dbTrans!.Description);
         }
 
         [Fact]
-        public async Task GetAllTransactions_ReturnsFilteredTransactions_WhenFiltered()
+        public async Task CreateTransaction_ShouldReturnNotFound_WhenOrderDoesNotExist()
         {
             // Arrange
-            var user = new User { Id = 1, FirstName = "Test", LastName = "User", Email = "test@test.com", UserName = "test@test.com" };
-            _context.Users.Add(user);
+            MockUserLogin(1, "Admin");
+            var userId = 10;
+            
+            _context.Users.Add(CreateValidUser(userId));
             await _context.SaveChangesAsync();
+            _context.ChangeTracker.Clear();
 
-            var order = new Order { OrderID = 1, UserID = 1, TotalAmount = 100m, Status = "Completed", ShippingAddress = "Test", OrderDate = DateTime.UtcNow };
-            _context.Orders.Add(order);
-            await _context.SaveChangesAsync();
-
-            var transactions = new List<Transaction>
+            var dto = new CreateTransactionDto
             {
-                new Transaction { TransactionID = 1, TransactionType = "Purchase", Amount = 100m, Status = "Completed", OrderID = 1, UserID = 1, TransactionDate = DateTime.UtcNow },
-                new Transaction { TransactionID = 2, TransactionType = "Refund", Amount = 50m, Status = "Completed", OrderID = 1, UserID = 1, TransactionDate = DateTime.UtcNow }
-            };
-            _context.Transactions.AddRange(transactions);
-            await _context.SaveChangesAsync();
-
-            SetupUserClaims("1", "Admin");
-
-            var filterParams = new TransactionFilterParams
-            {
+                UserID = userId,
+                OrderID = 999, // Yok
+                Amount = 100,
                 TransactionType = "Purchase",
-                Page = 1,
-                PageSize = 10
+                Description = "Test"
             };
 
             // Act
-            var result = await _controller.GetAllTransactions(filterParams);
+            var result = await _controller.CreateTransaction(dto);
 
             // Assert
-            var okResult = Assert.IsType<OkObjectResult>(result.Result);
-            var response = Assert.IsType<ApiResponse<PagedTransactionResult>>(okResult.Value);
-            Assert.True(response.Success);
-            // Verify response is valid (InMemory DB may have different behavior)
-            Assert.NotNull(response.Data);
+            var actionResult = Assert.IsType<NotFoundObjectResult>(result.Result);
+            var apiResponse = Assert.IsType<ApiResponse<TransactionDto>>(actionResult.Value);
+            Assert.Equal("Order not found", apiResponse.Message);
         }
     }
 }

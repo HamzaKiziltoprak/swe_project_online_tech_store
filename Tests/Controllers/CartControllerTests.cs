@@ -10,13 +10,14 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Xunit;
 
 namespace Tests.Controllers
 {
-    public class CartControllerTests
+    public class CartControllerTests : IDisposable
     {
         private readonly DataContext _context;
         private readonly Mock<UserManager<User>> _mockUserManager;
@@ -25,253 +26,68 @@ namespace Tests.Controllers
 
         public CartControllerTests()
         {
-            // Bellekte çalışan test veritabanı oluşturuyoruz.
-            // Her test çalıştığında yeni ve temiz bir DB oluşacak.
+            // 1. InMemory Database Setup
             var options = new DbContextOptionsBuilder<DataContext>()
                 .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
                 .Options;
             _context = new DataContext(options);
 
-            // UserManager için standart mock oluşturuluyor.
-            // Sadece kimlik kontrolü gereken noktalarda iş görüyor.
+            // 2. Mocks
+            _mockLogger = new Mock<ILogger<CartController>>();
+            
+            // UserManager Mock
             var userStore = new Mock<IUserStore<User>>();
             _mockUserManager = new Mock<UserManager<User>>(
-                userStore.Object, null, null, null, null, null, null, null, null);
+                userStore.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
-            // Controller loglaması için mock logger hazırlanıyor.
-            _mockLogger = new Mock<ILogger<CartController>>();
+            // 3. Controller Init
+            _controller = new CartController(_context, _mockUserManager.Object, _mockLogger.Object);
 
-            // Test edilecek controller örneği oluşturuluyor.
-            _controller = new CartController(
-                _context,
-                _mockUserManager.Object,
-                _mockLogger.Object
-            );
+            // 4. Seed Data
+            SeedDatabase();
         }
 
-        // Kullanıcının sepetinde ürün varsa özet bilgilerin doğru dönmesini test ediyor.
-        [Fact]
-        public async Task GetCart_ShouldReturnCartSummary_WhenCartIsNotEmpty()
+        public void Dispose()
         {
-            // Kullanıcıyı teste tanıtıyoruz.
-            var userId = 1;
-            SetupHttpContextWithUser(userId);
-
-            // Ürün verisini test veritabanına ekliyoruz.
-            var product = new Product { ProductID = 1, ProductName = "Laptop", Price = 1000, Stock = 10, BrandID=1, Description="Desc", ImageUrl="img.jpg" };
-            _context.Products.Add(product);
-
-            // Kullanıcının sepetine ürün ekliyoruz.
-            _context.CartItems.Add(new CartItem { CartItemID = 1, UserID = userId, ProductID = 1, Count = 2 });
-            await _context.SaveChangesAsync();
-
-            // Controller çağrılıyor.
-            var result = await _controller.GetCart();
-
-            // Dönen cevabı kontrol ediyoruz.
-            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
-            var apiResponse = Assert.IsType<ApiResponse<CartSummaryDto>>(actionResult.Value);
-            var summary = apiResponse.Data;
-
-            // Hesaplamaların doğru olduğunu doğruluyoruz.
-            Assert.True(apiResponse.Success);
-            Assert.Equal(2, summary.TotalItems);
-            Assert.Equal(2000, summary.TotalPrice);
-            Assert.Single(summary.Items);
+            _context.Database.EnsureDeleted();
+            _context.Dispose();
         }
 
-        // Sepet boşsa boş özet dönülmesini test eder.
-        [Fact]
-        public async Task GetCart_ShouldReturnEmptySummary_WhenCartIsEmpty()
+        private void SeedDatabase()
         {
-            var userId = 2;
-            SetupHttpContextWithUser(userId);
+            var product1 = new Product 
+            { 
+                ProductID = 1, 
+                ProductName = "Laptop", 
+                Price = 1000, 
+                Stock = 10, 
+                IsActive = true, 
+                ImageUrl = "img1.jpg",
+                Description = "Powerful Laptop"
+            };
+            
+            var product2 = new Product 
+            { 
+                ProductID = 2, 
+                ProductName = "Mouse", 
+                Price = 50, 
+                Stock = 5, 
+                IsActive = true, 
+                ImageUrl = "img2.jpg",
+                Description = "Wireless Mouse" 
+            };
+            
+            _context.Products.AddRange(product1, product2);
 
-            var result = await _controller.GetCart();
-            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
-            var apiResponse = Assert.IsType<ApiResponse<CartSummaryDto>>(actionResult.Value);
+            // User 1 için sepet
+            _context.CartItems.Add(new CartItem { CartItemID = 1, UserID = 1, ProductID = 1, Product = product1, Count = 2 }); // 2 Laptop (2000)
 
-            Assert.Equal(0, apiResponse.Data.TotalItems);
-            Assert.Empty(apiResponse.Data.Items);
+            // User 2 için sepet (User 1 görmemeli)
+            _context.CartItems.Add(new CartItem { CartItemID = 2, UserID = 2, ProductID = 2, Product = product2, Count = 1 });
+
+            _context.SaveChanges();
         }
 
-        // Sepete ilk defa ürün eklendiğinde başarılı şekilde Created dönmesini test eder.
-        [Fact]
-        public async Task AddToCart_ShouldReturnCreated_WhenItemIsAddedNew()
-        {
-            var userId = 3;
-            SetupHttpContextWithUser(userId);
-
-            // Sepete eklenecek ürün
-            var product = new Product { ProductID = 10, ProductName = "Mouse", Price = 50, Stock = 100, BrandID=1, Description="Desc", ImageUrl="img.jpg" };
-            _context.Products.Add(product);
-            await _context.SaveChangesAsync();
-
-            // İstek nesnesi
-            var request = new AddToCartDto { ProductID = 10, Count = 1 };
-
-            var result = await _controller.AddToCart(request);
-
-            // Dönen cevabı kontrol ediyoruz.
-            var actionResult = Assert.IsType<CreatedAtActionResult>(result.Result);
-            var cartItem = Assert.IsType<CartItemDto>(actionResult.Value);
-
-            // Ürün bilgileri doğru dönmüş mü kontrolü
-            Assert.Equal("Mouse", cartItem.ProductName);
-
-            // Veritabanına gerçekten yazılmış mı kontrolü
-            var dbItem = await _context.CartItems.FirstOrDefaultAsync(c => c.UserID == userId && c.ProductID == 10);
-            Assert.NotNull(dbItem);
-            Assert.Equal(1, dbItem.Count);
-        }
-
-        // Sepette zaten aynı ürün varsa miktarın güncellenmesini test eder.
-        [Fact]
-        public async Task AddToCart_ShouldUpdateQuantity_WhenItemAlreadyExists()
-        {
-            var userId = 4;
-            SetupHttpContextWithUser(userId);
-
-            var product = new Product { ProductID = 20, ProductName = "Keyboard", Price = 100, Stock = 50, BrandID=1, Description="Desc", ImageUrl="img.jpg" };
-            _context.Products.Add(product);
-
-            // Kullanıcının sepetinde ürün zaten var.
-            _context.CartItems.Add(new CartItem { UserID = userId, ProductID = 20, Count = 1 });
-            await _context.SaveChangesAsync();
-
-            var request = new AddToCartDto { ProductID = 20, Count = 2 };
-
-            var result = await _controller.AddToCart(request);
-
-            var actionResult = Assert.IsType<CreatedAtActionResult>(result.Result);
-            var cartItem = Assert.IsType<CartItemDto>(actionResult.Value);
-
-            // Miktarın doğru şekilde güncellendiğini kontrol ediyoruz.
-            Assert.Equal(3, cartItem.Count);
-        }
-
-        // Stok yetmezse BadRequest dönmesini test eder.
-        [Fact]
-        public async Task AddToCart_ShouldReturnBadRequest_WhenStockIsInsufficient()
-        {
-            var userId = 5;
-            SetupHttpContextWithUser(userId);
-
-            var product = new Product { ProductID = 30, ProductName = "Rare Item", Price = 500, Stock = 5, BrandID=1, Description="Desc", ImageUrl="img.jpg" };
-            _context.Products.Add(product);
-            await _context.SaveChangesAsync();
-
-            var request = new AddToCartDto { ProductID = 30, Count = 10 };
-
-            var result = await _controller.AddToCart(request);
-            var actionResult = Assert.IsType<BadRequestObjectResult>(result.Result);
-            var apiResponse = Assert.IsType<ApiResponse<CartItemDto>>(actionResult.Value);
-
-            Assert.False(apiResponse.Success);
-            Assert.Contains("Not enough stock", apiResponse.Message);
-        }
-
-        // Ürün yoksa NotFound dönmeli.
-        [Fact]
-        public async Task AddToCart_ShouldReturnNotFound_WhenProductDoesNotExist()
-        {
-            var userId = 6;
-            SetupHttpContextWithUser(userId);
-            var request = new AddToCartDto { ProductID = 999, Count = 1 };
-
-            var result = await _controller.AddToCart(request);
-            var actionResult = Assert.IsType<NotFoundObjectResult>(result.Result);
-        }
-
-        // Sepet ürününün miktarını güncellerken başarılı güncellenmesini test eder.
-        [Fact]
-        public async Task UpdateCartItem_ShouldReturnOk_WhenUpdateIsValid()
-        {
-            var userId = 7;
-            SetupHttpContextWithUser(userId);
-
-            var product = new Product { ProductID = 40, ProductName = "Monitor", Price = 200, Stock = 20, BrandID=1, Description="Desc", ImageUrl="img.jpg" };
-            _context.Products.Add(product);
-
-            var item = new CartItem { CartItemID = 100, UserID = userId, ProductID = 40, Count = 1 };
-            _context.CartItems.Add(item);
-            await _context.SaveChangesAsync();
-
-            var request = new UpdateCartItemDto { Count = 5 };
-
-            var result = await _controller.UpdateCartItem(100, request);
-            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
-            var apiResponse = Assert.IsType<ApiResponse<CartItemDto>>(actionResult.Value);
-
-            Assert.Equal(5, apiResponse.Data.Count);
-        }
-
-        // Kullanıcı kendine ait olmayan ürünü güncelleyememeli.
-        [Fact]
-        public async Task UpdateCartItem_ShouldReturnNotFound_WhenItemDoesNotBelongToUser()
-        {
-            var userId = 8;
-            var otherUserId = 9;
-            SetupHttpContextWithUser(userId);
-
-            var product = new Product { ProductID = 50, ProductName = "Webcam", Price = 50, Stock = 10, BrandID=1, Description="Desc", ImageUrl="img.jpg" };
-            _context.Products.Add(product);
-
-            _context.CartItems.Add(new CartItem { CartItemID = 200, UserID = otherUserId, ProductID = 50, Count = 1 });
-            await _context.SaveChangesAsync();
-
-            var request = new UpdateCartItemDto { Count = 2 };
-
-            var result = await _controller.UpdateCartItem(200, request);
-            var actionResult = Assert.IsType<NotFoundObjectResult>(result.Result);
-        }
-
-        // Sepetten ürün silme işleminin başarılı gerçekleşmesini test eder.
-        [Fact]
-        public async Task RemoveFromCart_ShouldReturnOk_WhenItemExists()
-        {
-            var userId = 10;
-            SetupHttpContextWithUser(userId);
-
-            _context.CartItems.Add(new CartItem { CartItemID = 300, UserID = userId, Count = 1, ProductID = 1 });
-            await _context.SaveChangesAsync();
-
-            var result = await _controller.RemoveFromCart(300);
-
-            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
-            var apiResponse = Assert.IsType<ApiResponse<object>>(actionResult.Value);
-
-            Assert.True(apiResponse.Success);
-
-            // Ürünün gerçekten silindiğini kontrol ediyoruz.
-            var dbItem = await _context.CartItems.FindAsync(300);
-            Assert.Null(dbItem);
-        }
-
-        // Kullanıcının tüm sepetinin temizlenmesini test eder.
-        [Fact]
-        public async Task ClearCart_ShouldRemoveAllItemsForUser()
-        {
-            var userId = 11;
-            SetupHttpContextWithUser(userId);
-
-            _context.CartItems.Add(new CartItem { CartItemID = 401, UserID = userId, Count = 1, ProductID=1 });
-            _context.CartItems.Add(new CartItem { CartItemID = 402, UserID = userId, Count = 2, ProductID=2 });
-            _context.CartItems.Add(new CartItem { CartItemID = 403, UserID = 99, Count = 1, ProductID=1 });
-            await _context.SaveChangesAsync();
-
-            var result = await _controller.ClearCart();
-            var actionResult = Assert.IsType<OkObjectResult>(result.Result);
-
-            // Sadece giriş yapan kullanıcıya ait ürünler silinmeli.
-            var userItems = await _context.CartItems.Where(c => c.UserID == userId).ToListAsync();
-            Assert.Empty(userItems);
-
-            var otherUserItems = await _context.CartItems.Where(c => c.UserID == 99).ToListAsync();
-            Assert.Single(otherUserItems);
-        }
-
-        // Controller içinde kullanıcı kimliğini taklit etmek için kullanılan yardımcı fonksiyon.
         private void SetupHttpContextWithUser(int userId)
         {
             var claims = new List<Claim>
@@ -279,12 +95,276 @@ namespace Tests.Controllers
                 new Claim(ClaimTypes.NameIdentifier, userId.ToString())
             };
             var identity = new ClaimsIdentity(claims, "TestAuth");
-            var claimsPrincipal = new ClaimsPrincipal(identity);
+            var principal = new ClaimsPrincipal(identity);
 
             _controller.ControllerContext = new ControllerContext
             {
-                HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+                HttpContext = new DefaultHttpContext { User = principal }
             };
         }
+
+        #region GetCart Tests
+
+        [Fact]
+        public async Task GetCart_ShouldReturnCorrectItemsAndTotals_ForUser1()
+        {
+            // Arrange
+            SetupHttpContextWithUser(1);
+
+            // Act
+            var result = await _controller.GetCart();
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            var response = Assert.IsType<ApiResponse<CartSummaryDto>>(okResult.Value);
+            
+            Assert.True(response!.Success);
+            var cart = response.Data!;
+
+            Assert.Single(cart.Items); 
+            Assert.Equal(2, cart.TotalItems); 
+            Assert.Equal(2000, cart.TotalPrice); 
+            Assert.Equal("Laptop", cart.Items[0].ProductName);
+        }
+
+        [Fact]
+        public async Task GetCart_ShouldReturnEmpty_ForUserWithNoItems()
+        {
+            // Arrange
+            SetupHttpContextWithUser(99); 
+
+            // Act
+            var result = await _controller.GetCart();
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            var response = Assert.IsType<ApiResponse<CartSummaryDto>>(okResult.Value);
+            
+            Assert.Empty(response!.Data!.Items);
+            Assert.Equal(0, response.Data.TotalPrice);
+        }
+
+        #endregion
+
+        #region AddToCart Tests
+
+        [Fact]
+        public async Task AddToCart_ShouldAddNewItem_WhenItemDoesNotExist()
+        {
+            // Arrange
+            SetupHttpContextWithUser(1);
+            var dto = new AddToCartDto { ProductID = 2, Count = 1 }; // Mouse ekle
+
+            // Act
+            var result = await _controller.AddToCart(dto);
+
+            // Assert
+            var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
+            
+            // DÜZELTME: Controller CreatedAtAction içinde direkt DTO dönüyor, ApiResponse wrapper kullanmıyor.
+            var response = Assert.IsType<CartItemDto>(createdResult.Value);
+            
+            Assert.Equal("Mouse", response.ProductName);
+            Assert.Equal(1, response.Count);
+            
+            // DB kontrolü
+            var dbItem = await _context.CartItems.FirstOrDefaultAsync(c => c.UserID == 1 && c.ProductID == 2);
+            Assert.NotNull(dbItem);
+            Assert.Equal(1, dbItem!.Count);
+        }
+
+        [Fact]
+        public async Task AddToCart_ShouldIncreaseQuantity_WhenItemAlreadyExists()
+        {
+            // Arrange
+            SetupHttpContextWithUser(1);
+            var dto = new AddToCartDto { ProductID = 1, Count = 1 }; 
+
+            // Act
+            var result = await _controller.AddToCart(dto);
+
+            // Assert
+            var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
+            
+            // DÜZELTME: Controller direkt DTO dönüyor
+            var response = Assert.IsType<CartItemDto>(createdResult.Value);
+            
+            Assert.Equal(3, response.Count); // 2 + 1 = 3
+
+            // DB kontrolü
+            var dbItem = await _context.CartItems.FirstAsync(c => c.CartItemID == 1);
+            Assert.Equal(3, dbItem.Count);
+        }
+
+        [Fact]
+        public async Task AddToCart_ShouldReturnBadRequest_WhenStockInsufficient()
+        {
+            // Arrange
+            SetupHttpContextWithUser(1);
+            var dto = new AddToCartDto { ProductID = 1, Count = 9 }; 
+
+            // Act
+            var result = await _controller.AddToCart(dto);
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+            var response = Assert.IsType<ApiResponse<CartItemDto>>(badRequestResult.Value);
+            
+            Assert.False(response!.Success);
+            Assert.Contains("Not enough stock", response.Message);
+        }
+
+        [Fact]
+        public async Task AddToCart_ShouldReturnNotFound_WhenProductDoesNotExist()
+        {
+            // Arrange
+            SetupHttpContextWithUser(1);
+            var dto = new AddToCartDto { ProductID = 999, Count = 1 };
+
+            // Act
+            var result = await _controller.AddToCart(dto);
+
+            // Assert
+            Assert.IsType<NotFoundObjectResult>(result.Result);
+        }
+
+        #endregion
+
+        #region UpdateCartItem Tests
+
+        [Fact]
+        public async Task UpdateCartItem_ShouldUpdateCount_WhenStockIsSufficient()
+        {
+            // Arrange
+            SetupHttpContextWithUser(1);
+            var dto = new UpdateCartItemDto { Count = 5 };
+
+            // Act
+            var result = await _controller.UpdateCartItem(1, dto);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            var response = Assert.IsType<ApiResponse<CartItemDto>>(okResult.Value);
+            
+            Assert.Equal(5, response!.Data!.Count);
+            
+            // DB Check
+            var dbItem = await _context.CartItems.FindAsync(1);
+            Assert.Equal(5, dbItem!.Count);
+        }
+
+        [Fact]
+        public async Task UpdateCartItem_ShouldReturnBadRequest_WhenStockInsufficient()
+        {
+            // Arrange
+            SetupHttpContextWithUser(1);
+            var dto = new UpdateCartItemDto { Count = 15 };
+
+            // Act
+            var result = await _controller.UpdateCartItem(1, dto);
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+            var response = Assert.IsType<ApiResponse<CartItemDto>>(badRequestResult.Value);
+            
+            Assert.Contains("Not enough stock", response!.Message);
+        }
+
+        [Fact]
+        public async Task UpdateCartItem_ShouldReturnNotFound_WhenItemBelongsToAnotherUser()
+        {
+            // Arrange
+            SetupHttpContextWithUser(1);
+            var dto = new UpdateCartItemDto { Count = 1 };
+
+            // Act
+            var result = await _controller.UpdateCartItem(2, dto);
+
+            // Assert
+            var notFoundResult = Assert.IsType<NotFoundObjectResult>(result.Result);
+            var response = Assert.IsType<ApiResponse<CartItemDto>>(notFoundResult.Value);
+            Assert.Equal("Cart item not found", response!.Message);
+        }
+
+        #endregion
+
+        #region RemoveFromCart Tests
+
+        [Fact]
+        public async Task RemoveFromCart_ShouldRemoveItem_WhenItemExists()
+        {
+            // Arrange
+            SetupHttpContextWithUser(1);
+
+            // Act
+            var result = await _controller.RemoveFromCart(1);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            var response = Assert.IsType<ApiResponse<object>>(okResult.Value);
+            
+            Assert.True(response!.Success);
+
+            // DB Check
+            var item = await _context.CartItems.FindAsync(1);
+            Assert.Null(item);
+        }
+
+        [Fact]
+        public async Task RemoveFromCart_ShouldReturnNotFound_WhenItemDoesNotExist()
+        {
+            // Arrange
+            SetupHttpContextWithUser(1);
+
+            // Act
+            var result = await _controller.RemoveFromCart(99);
+
+            // Assert
+            Assert.IsType<NotFoundObjectResult>(result.Result);
+        }
+
+        #endregion
+
+        #region ClearCart Tests
+
+        [Fact]
+        public async Task ClearCart_ShouldRemoveAllItemsForUser()
+        {
+            // Arrange
+            SetupHttpContextWithUser(1); 
+
+            // Act
+            var result = await _controller.ClearCart();
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            var response = Assert.IsType<ApiResponse<object>>(okResult.Value);
+            Assert.True(response!.Success);
+
+            // DB Check: User 1'in sepeti boş olmalı
+            var user1Items = await _context.CartItems.Where(c => c.UserID == 1).ToListAsync();
+            Assert.Empty(user1Items);
+
+            // DB Check: User 2'nin sepeti durmalı
+            var user2Items = await _context.CartItems.Where(c => c.UserID == 2).ToListAsync();
+            Assert.Single(user2Items);
+        }
+
+        [Fact]
+        public async Task ClearCart_ShouldReturnOk_WhenCartAlreadyEmpty()
+        {
+            // Arrange
+            SetupHttpContextWithUser(99); 
+
+            // Act
+            var result = await _controller.ClearCart();
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            var response = Assert.IsType<ApiResponse<object>>(okResult.Value);
+            Assert.Contains("already empty", response!.Message);
+        }
+
+        #endregion
     }
 }
